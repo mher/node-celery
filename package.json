@@ -1,0 +1,18 @@
+{
+	"name": "celery",
+	"version": "0.1.0",
+	"description": "Celery client for Node",
+	"author": "Mher Movsisyan <mher.movsisyan@gmail.com>",
+	"dependencies": {
+		"amqp": "*",
+		"node-uuid": "*",
+	},
+	"repository": {
+		"type": "git",
+		"url": "git://github.com/mher/node-celery.git"
+	},
+	"devDependencies": {
+		"mocha": "*"
+	},
+	"engine": "node >= 0.8.2"
+}
