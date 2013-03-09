@@ -26,5 +26,15 @@ def time():
     return time.time()
 
 
+@celery.task
+def error(msg):
+    raise Exception(msg)
+
+
+@celery.task
+def echo(msg):
+    return msg
+
+
 if __name__ == "__main__":
     celery.start()
