@@ -7,26 +7,27 @@ var uuid = require('node-uuid'),
 
 var createMessage = require('./protocol').createMessage;
 
+
 function Configuration(options) {
-    var self = this;
+	var self = this;
 
 	for (var o in options) {
 		if (options.hasOwnProperty(o)) {
-			self[o] = options[o].replace(/^CELERY_/, '');
+			self[o.replace(/^CELERY_/, '')] = options[o];
 		}
 	}
 
-    self.BROKER = self.BROKER || 'amqp://';
+	self.BROKER_URL = self.BROKER_URL || 'amqp://';
 	self.DEFAULT_QUEUE = self.DEFAULT_QUEUE || 'celery';
 	self.RESULT_EXCHANGE = self.RESULT_EXCHANGE || 'celeryresults';
 	self.TASK_RESULT_EXPIRES = self.TASK_RESULT_EXPIRES || 86400000; // 1 day
 
-    if (self.RESULT_BACKEND && self.RESULT_BACKEND.toLowerCase() === 'amqp') {
-        self.backend_type = 'amqp';
-    }
-	else if (self.RESULT_BACKEND && url.parse(self.RESULT_BACKEND).protocol === 'redis:') {
-        self.backend_type = 'redis';
-    }
+	if (self.RESULT_BACKEND && self.RESULT_BACKEND.toLowerCase() === 'amqp') {
+		self.backend_type = 'amqp';
+	} else if (self.RESULT_BACKEND && url.parse(self.RESULT_BACKEND)
+		.protocol === 'redis:') {
+		self.backend_type = 'redis';
+	}
 }
 
 function Client(conf) {
@@ -38,20 +39,29 @@ function Client(conf) {
 	self.backend_connected = false;
 
 	self.broker = amqp.createConnection({
-		url: self.conf.BROKER,
+		url: self.conf.BROKER_URL,
 	});
 
 	if (self.conf.backend_type === 'amqp') {
 		self.backend = self.broker;
 		self.backend_connected = true;
 	} else if (self.conf.backend_type === 'redis') {
-		self.backend = redis.createClient();
+		var purl = url.parse(self.conf.RESULT_BACKEND);
+		self.backend = redis.createClient(purl.port, purl.hostname);
 
-		self.backend.on('connect', function() {
+		var on_ready = function() {
 			self.backend_connected = true;
 			if (self.broker_connected) {
 				self.ready = true;
 				self.emit('connect');
+			}
+		};
+
+		self.backend.on('connect', function() {
+			if (purl.auth) {
+				self.backend.auth(purl.auth.split(':')[1], on_ready);
+			} else {
+				on_ready();
 			}
 		});
 
@@ -116,10 +126,10 @@ Task.prototype.call = function(args, kwargs, options, callback) {
 	args = args || [];
 	kwargs = kwargs || {};
 
-	if (this.client.broker_connected) {
-		return this.publish(args, kwargs, options, callback);
+	if (self.client.broker_connected) {
+		return self.publish(args, kwargs, options, callback);
 	} else {
-		this.client.broker.once('connect', function() {
+		self.client.broker.once('connect', function() {
 			self.publish(args, kwargs, options, callback);
 		});
 	}
@@ -158,7 +168,7 @@ util.inherits(Result, events.EventEmitter);
 Result.prototype.get = function(callback) {
 	var self = this;
 	if (callback && self.result == null) {
-		this.client.backend.get('celery-task-meta-' + self.taskid, function(err, reply) {
+		self.client.backend.get('celery-task-meta-' + self.taskid, function(err, reply) {
 			self.result = JSON.parse(reply);
 			callback(self.result);
 		});

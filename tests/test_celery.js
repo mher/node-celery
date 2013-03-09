@@ -2,8 +2,8 @@ var celery = require('../celery'),
 	assert = require('assert');
 
 var conf = {
-	broker: 'amqp://',
-	result_backend: 'redis://',
+	CELERY_BROKER_URL: 'amqp://',
+	CELERY_RESULT_BACKEND: 'redis://',
 }
 
 describe('celery functional tests', function() {
@@ -11,7 +11,7 @@ describe('celery functional tests', function() {
 		it('should create a client without error', function(done) {
 			var client1 = celery.createClient(conf),
 				client2 = celery.createClient({
-					broker: 'amqp://foo'
+					CELERY_BROKER_URL: 'amqp://foo'
 				});
 
 			client1.on('connect', function() {
