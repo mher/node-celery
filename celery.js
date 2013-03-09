@@ -9,6 +9,9 @@ var uuid = require('node-uuid'),
 var createMessage = require('./protocol').createMessage;
 
 
+debug = process.env['NODE_CELERY_DEBUG'] === '1' ? util.debug : function () {};
+
+
 function Configuration(options) {
 	var self = this;
 
@@ -25,8 +28,7 @@ function Configuration(options) {
 
 	if (self.RESULT_BACKEND && self.RESULT_BACKEND.toLowerCase() === 'amqp') {
 		self.backend_type = 'amqp';
-	} else if (self.RESULT_BACKEND && url.parse(self.RESULT_BACKEND)
-		.protocol === 'redis:') {
+	} else if (self.RESULT_BACKEND && url.parse(self.RESULT_BACKEND).protocol === 'redis:') {
 		self.backend_type = 'redis';
 	}
 }
@@ -35,6 +37,7 @@ function Client(conf) {
 	var self = this;
 
 	self.conf = new Configuration(conf);
+
 	self.ready = false;
 	self.broker_connected = false;
 	self.backend_connected = false;
@@ -54,11 +57,13 @@ function Client(conf) {
 			self.backend_connected = true;
 			if (self.broker_connected) {
 				self.ready = true;
+                debug('Emiting connect event');
 				self.emit('connect');
 			}
 		};
 
 		self.backend.on('connect', function() {
+            debug('Backend connected...');
 			if (purl.auth) {
 				self.backend.auth(purl.auth.split(':')[1], on_ready);
 			} else {
@@ -70,8 +75,12 @@ function Client(conf) {
 			self.emit('error', err);
 		});
 	}
+    else {
+        self.backend_connected = true;
+    }
 
 	self.broker.on('ready', function() {
+        debug('Broker connected...');
 		self.broker_connected = true;
 		if (self.backend_connected) {
 			self.ready = true;
@@ -149,8 +158,8 @@ function Result(taskid, client) {
 	self.client = client;
 	self.result = null;
 
-
 	if (self.client.conf.backend_type === 'amqp') {
+        debug('Subscribing to result queue...')
 		self.client.backend.queue(
 		self.taskid.replace(/-/g, ''), {
 			"arguments": {
@@ -163,6 +172,7 @@ function Result(taskid, client) {
 			q.subscribe(function(message) {
 				self.result = message;
 				//q.unbind('#');
+                debug('Emiting ready event...');
 				self.emit('ready', message);
                 self.emit(message.status.toLowerCase(), message);
 			});
