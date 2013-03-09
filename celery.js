@@ -7,27 +7,47 @@ var uuid = require('node-uuid'),
 
 var createMessage = require('./protocol').createMessage;
 
+function Configuration(options) {
+    var self = this;
+
+	for (var o in options) {
+		if (options.hasOwnProperty(o)) {
+			self[o] = options[o].replace(/^CELERY_/, '');
+		}
+	}
+
+    self.BROKER = self.BROKER || 'amqp://';
+	self.DEFAULT_QUEUE = self.DEFAULT_QUEUE || 'celery';
+	self.RESULT_EXCHANGE = self.RESULT_EXCHANGE || 'celeryresults';
+	self.TASK_RESULT_EXPIRES = self.TASK_RESULT_EXPIRES || 86400000; // 1 day
+
+    if (self.RESULT_BACKEND && self.RESULT_BACKEND.toLowerCase() === 'amqp') {
+        self.backend_type = 'amqp';
+    }
+	else if (self.RESULT_BACKEND && url.parse(self.RESULT_BACKEND).protocol === 'redis:') {
+        self.backend_type = 'redis';
+    }
+}
 
 function Client(conf) {
 	var self = this;
 
-	this.conf = conf || {};
-	this.ready = false;
-	this.broker_connected = false;
-	this.backend_connected = false;
+	self.conf = new Configuration(conf);
+	self.ready = false;
+	self.broker_connected = false;
+	self.backend_connected = false;
 
-	this.broker = amqp.createConnection({
-		url: this.conf.broker || 'amqp://'
+	self.broker = amqp.createConnection({
+		url: self.conf.BROKER,
 	});
 
-	if (this.conf.result_backend && this.conf.result_backend.toLowerCase() === 'amqp') {
-		this.backend = this.broker;
-		this.backend_connected = true;
-	} else if (this.conf.result_backend && url.parse(this.conf.result_backend)
-		.protocol === 'redis:') {
-		this.backend = redis.createClient();
+	if (self.conf.backend_type === 'amqp') {
+		self.backend = self.broker;
+		self.backend_connected = true;
+	} else if (self.conf.backend_type === 'redis') {
+		self.backend = redis.createClient();
 
-		this.backend.on('connect', function() {
+		self.backend.on('connect', function() {
 			self.backend_connected = true;
 			if (self.broker_connected) {
 				self.ready = true;
@@ -35,12 +55,12 @@ function Client(conf) {
 			}
 		});
 
-		this.backend.on('error', function(err) {
+		self.backend.on('error', function(err) {
 			self.emit('error', err);
 		});
 	}
 
-	this.broker.on('ready', function() {
+	self.broker.on('ready', function() {
 		self.broker_connected = true;
 		if (self.backend_connected) {
 			self.ready = true;
@@ -48,17 +68,13 @@ function Client(conf) {
 		}
 	});
 
-	this.broker.on('error', function(err) {
+	self.broker.on('error', function(err) {
 		self.emit('error', err);
 	});
 
-	this.broker.on('end', function() {
+	self.broker.on('end', function() {
 		self.emit('end');
 	});
-
-	this.default_queue = this.conf.CELERY_DEFAULT_QUEUE || 'celery';
-	this.result_exchange = this.conf.CELERY_RESULT_EXCHANGE || 'celeryresults';
-	this.task_result_expires = this.conf.CELERY_TASK_RESULT_EXPIRES || 86400000; // 1day
 }
 
 util.inherits(Client, events.EventEmitter);
@@ -75,17 +91,17 @@ Client.prototype.end = function() {
 };
 
 function Task(client, name, options) {
-	this.client = client;
-	this.name = name;
-	this.options = options || {};
-
 	var self = this;
 
-	this.publish = function(args, kwargs, options, callback) {
+	self.client = client;
+	self.name = name;
+	self.options = options || {};
+
+	self.publish = function(args, kwargs, options, callback) {
 		options = options || {};
 		var id = uuid.v4();
 		self.client.broker.publish(
-		options.queue || self.client.default_queue,
+		options.queue || self.client.conf.DEFAULT_QUEUE,
 		createMessage(self.name, args, kwargs, options, id), {
 			'contentType': 'application/json'
 		},
@@ -110,23 +126,24 @@ Task.prototype.call = function(args, kwargs, options, callback) {
 };
 
 function Result(taskid, client) {
-	events.EventEmitter.call(this);
-	this.taskid = taskid;
-	this.client = client;
-	this.result = null;
-
 	var self = this;
 
-	if (this.client.result_backend && this.client.result_backend.toLowerCase() === 'amqp') {
-		this.client.backend.queue(
-		this.taskid.replace(/-/g, ''), {
+	events.EventEmitter.call(self);
+	self.taskid = taskid;
+	self.client = client;
+	self.result = null;
+
+
+	if (self.client.conf.backend_type === 'amqp') {
+		self.client.backend.queue(
+		self.taskid.replace(/-/g, ''), {
 			"arguments": {
-				'x-expires': this.client.task_result_expires
+				'x-expires': self.client.conf.TASK_RESULT_EXPIRES
 			}
 		},
 
 		function(q) {
-			q.bind(self.client.result_exchange, '#');
+			q.bind(self.client.conf.RESULT_EXCHANGE, '#');
 			q.subscribe(function(message) {
 				self.result = message;
 				//q.unbind('#');
