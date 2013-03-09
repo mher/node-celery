@@ -106,7 +106,7 @@ Client.prototype.call = function(name, args, kwargs, options, callback) {
         result = task.call(args, kwargs, options);
 
     if (callback) {
-        result.on('result', callback);
+        result.on('ready', callback);
     }
     return result;
 };
@@ -163,7 +163,7 @@ function Result(taskid, client) {
 			q.subscribe(function(message) {
 				self.result = message;
 				//q.unbind('#');
-				self.emit("result", message);
+				self.emit('ready', message);
 			});
 		});
 	}

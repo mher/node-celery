@@ -68,7 +68,7 @@ describe('celery functional tests', function() {
 
 			client.on('connect', function() {
 				var result = add.call([1, 2]);
-				result.on('result', function(message) {
+				result.on('ready', function(message) {
 					assert.equal(message.result, 3);
 					client.end();
 				});
@@ -115,7 +115,7 @@ describe('celery functional tests', function() {
 				var result = time.call(null, null, {
 					eta: eta
 				});
-				result.on('result', function(message) {
+				result.on('ready', function(message) {
 					//assert.ok(parseInt(message.result) - start > 1);
 					client.end();
 				});
@@ -139,7 +139,7 @@ describe('celery functional tests', function() {
 					result = time.call(null, null, {
 						expires: past
 					});
-				result.on('result', function(message) {
+				result.on('ready', function(message) {
 					assert.equal(message.status, 'REVOKED');
 					client.end();
 				});
