@@ -164,6 +164,7 @@ function Result(taskid, client) {
 				self.result = message;
 				//q.unbind('#');
 				self.emit('ready', message);
+                self.emit(message.status.toLowerCase(), message);
 			});
 		});
 	}
