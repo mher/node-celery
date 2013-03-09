@@ -1,11 +1,15 @@
 var celery = require('../celery'),
 	assert = require('assert');
 
+var conf = {
+	broker: 'amqp://',
+	result_backend: 'redis://',
+}
 
 describe('celery functional tests', function() {
 	describe('initialization', function() {
 		it('should create a client without error', function(done) {
-			var client1 = celery.createClient(),
+			var client1 = celery.createClient(conf),
 				client2 = celery.createClient({
 					broker: 'amqp://foo'
 				});
@@ -39,7 +43,7 @@ describe('celery functional tests', function() {
 
 	describe('basic task calls', function() {
 		it('should call a task without error', function(done) {
-			var client = celery.createClient(),
+			var client = celery.createClient(conf),
 				add = client.createTask('tasks.add');
 
 			client.on('connect', function() {
@@ -56,9 +60,10 @@ describe('celery functional tests', function() {
 		});
 	})
 
-	describe('basic task result handling', function() {
+	describe('result handling with amqp backend', function() {
 		it('should return a task result', function(done) {
-			var client = celery.createClient(),
+			if (conf.result_backend !== 'amqp') done();
+			var client = celery.createClient(conf),
 				add = client.createTask('tasks.add');
 
 			client.on('connect', function() {
@@ -75,16 +80,38 @@ describe('celery functional tests', function() {
 		});
 	})
 
+	describe('result handling with redis backend', function() {
+		it('should return a task result', function(done) {
+			if (conf.result_backend === 'amqp') done();
+			var client = celery.createClient(conf),
+				add = client.createTask('tasks.add');
+
+			client.on('connect', function() {
+				var result = add.call([1, 2]);
+				setTimeout(function() {
+					result.get(function(message) {
+						assert.equal(message.result, 3);
+						client.end();
+					});
+				}, 1000);
+			});
+
+			client.on('end', function() {
+				done();
+			});
+		});
+	})
+
 	describe('eta', function() {
 		it('should call a task with a delay', function(done) {
-			var client = celery.createClient(),
+			if (conf.result_backend !== 'amqp') done();
+			var client = celery.createClient(conf),
 				time = client.createTask('tasks.time');
 
 			client.on('connect', function() {
 				var start = new Date()
 					.getTime(),
 					eta = new Date(start + 100000);
-				console.log(eta);
 				var result = time.call(null, null, {
 					eta: eta
 				});
@@ -102,7 +129,8 @@ describe('celery functional tests', function() {
 
 	describe('expires', function() {
 		it('should call a task which expires', function(done) {
-			var client = celery.createClient(),
+			if (conf.result_backend !== 'amqp') done();
+			var client = celery.createClient(conf),
 				time = client.createTask('tasks.time');
 
 			client.on('connect', function() {
