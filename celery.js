@@ -3,6 +3,7 @@ var uuid = require('node-uuid'),
 	util = require('util'),
 	amqp = require('amqp'),
 	redis = require('redis'),
+	assert = require('assert'),
 	events = require('events');
 
 var createMessage = require('./protocol').createMessage;
@@ -100,6 +101,16 @@ Client.prototype.end = function() {
 	}
 };
 
+Client.prototype.call = function(name, args, kwargs, options, callback) {
+    var task = this.createTask(name),
+        result = task.call(args, kwargs, options);
+
+    if (callback) {
+        result.on('result', callback);
+    }
+    return result;
+};
+
 function Task(client, name, options) {
 	var self = this;
 
@@ -108,7 +119,6 @@ function Task(client, name, options) {
 	self.options = options || {};
 
 	self.publish = function(args, kwargs, options, callback) {
-		options = options || {};
 		var id = uuid.v4();
 		self.client.broker.publish(
 		options.queue || self.client.conf.DEFAULT_QUEUE,
@@ -125,14 +135,10 @@ Task.prototype.call = function(args, kwargs, options, callback) {
 
 	args = args || [];
 	kwargs = kwargs || {};
+    options = options || {};
 
-	if (self.client.broker_connected) {
-		return self.publish(args, kwargs, options, callback);
-	} else {
-		self.client.broker.once('connect', function() {
-			self.publish(args, kwargs, options, callback);
-		});
-	}
+    assert(self.client.ready);
+	return self.publish(args, kwargs, options, callback);
 };
 
 function Result(taskid, client) {
