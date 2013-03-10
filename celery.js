@@ -6,7 +6,8 @@ var uuid = require('node-uuid'),
 	assert = require('assert'),
 	events = require('events');
 
-var createMessage = require('./protocol').createMessage;
+var createMessage = require('./protocol')
+	.createMessage;
 
 
 debug = process.env.NODE_CELERY_DEBUG === '1' ? util.debug : function() {};
@@ -22,12 +23,17 @@ function Configuration(options) {
 
 	self.BROKER_URL = self.BROKER_URL || 'amqp://';
 	self.DEFAULT_QUEUE = self.DEFAULT_QUEUE || 'celery';
+	self.DEFAULT_EXCHANGE = self.DEFAULT_EXCHANGE || '';
+	self.DEFAULT_EXCHANGE_TYPE = self.DEFAULT_EXCHANGE_TYPE || 'direct';
+	self.DEFAULT_ROUTING_KEY = self.DEFAULT_ROUTING_KEY || 'celery';
 	self.RESULT_EXCHANGE = self.RESULT_EXCHANGE || 'celeryresults';
 	self.TASK_RESULT_EXPIRES = self.TASK_RESULT_EXPIRES || 86400000; // 1 day
+	self.ROUTES = self.ROUTES || {};
 
 	if (self.RESULT_BACKEND && self.RESULT_BACKEND.toLowerCase() === 'amqp') {
 		self.backend_type = 'amqp';
-	} else if (self.RESULT_BACKEND && url.parse(self.RESULT_BACKEND).protocol === 'redis:') {
+	} else if (self.RESULT_BACKEND && url.parse(self.RESULT_BACKEND)
+		.protocol === 'redis:') {
 		self.backend_type = 'redis';
 	}
 }
@@ -43,7 +49,9 @@ function Client(conf, callback) {
 
 	self.broker = amqp.createConnection({
 		url: self.conf.BROKER_URL
-	}, {}, callback);
+	}, {
+		defaultExchangeName: self.conf.DEFAULT_EXCHANGE,
+	}, callback);
 
 	if (self.conf.backend_type === 'amqp') {
 		self.backend = self.broker;
@@ -140,10 +148,13 @@ function Task(client, name, options) {
 	self.name = name;
 	self.options = options || {};
 
+	var route = self.client.conf.ROUTES[name],
+		queue = route && route.queue;
+
 	self.publish = function(args, kwargs, options, callback) {
 		var id = uuid.v4();
 		self.client.broker.publish(
-		options.queue || self.client.conf.DEFAULT_QUEUE,
+		self.options.queue || queue || self.client.conf.DEFAULT_QUEUE,
 		createMessage(self.name, args, kwargs, options, id), {
 			'contentType': 'application/json'
 		},
