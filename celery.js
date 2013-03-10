@@ -32,7 +32,7 @@ function Configuration(options) {
 	}
 }
 
-function Client(conf) {
+function Client(conf, callback) {
 	var self = this;
 
 	self.conf = new Configuration(conf);
@@ -43,7 +43,7 @@ function Client(conf) {
 
 	self.broker = amqp.createConnection({
 		url: self.conf.BROKER_URL
-	});
+	}, {}, callback);
 
 	if (self.conf.backend_type === 'amqp') {
 		self.backend = self.broker;
@@ -207,6 +207,6 @@ Result.prototype.get = function(callback) {
 	}
 };
 
-exports.createClient = function(config) {
-	return new Client(config);
+exports.createClient = function(config, callback) {
+	return new Client(config, callback);
 };
