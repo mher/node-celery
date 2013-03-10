@@ -108,7 +108,22 @@ Client.prototype.end = function() {
 	}
 };
 
-Client.prototype.call = function(name, args, kwargs, options, callback) {
+Client.prototype.call = function(name /*[args], [kwargs], [options], [callback]*/ ) {
+	var args, kwargs, options, callback;
+	for (var i = arguments.length - 1; i > 0; i--) {
+		if (typeof arguments[i] === 'function') {
+			callback = arguments[i];
+		} else if (Object.prototype.toString.call(arguments[i]) === '[object Array]') {
+			args = arguments[i];
+		} else if (typeof arguments[i] === 'object') {
+			if (kwargs) {
+				options = arguments[i];
+			} else {
+				kwargs = arguments[i];
+			}
+		}
+	}
+
 	var task = this.createTask(name),
 		result = task.call(args, kwargs, options);
 
@@ -142,7 +157,7 @@ Task.prototype.call = function(args, kwargs, options, callback) {
 
 	args = args || [];
 	kwargs = kwargs || {};
-	options = options || {};
+	options = options || self.options || {};
 
 	assert(self.client.ready);
 	return self.publish(args, kwargs, options, callback);
