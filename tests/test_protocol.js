@@ -4,14 +4,10 @@ var assert = require('assert'),
 		.createMessage;
 
 
-uuid.v4 = function() {
-	return "id";
-}
-
 function msg(task, args, kwargs, options, id) {
+	id = id || 'id';
 	return JSON.parse(createMessage(task, args, kwargs, options, id));
 }
-
 
 describe('protocol', function() {
 	describe('#createMessage', function() {
@@ -22,7 +18,7 @@ describe('protocol', function() {
 				kwargs: {},
 				id: "id"
 			});
-		})
+		});
 
 		it('should create a message with the given args', function() {
 			assert.deepEqual(msg("foo", [1, 2]), {
@@ -47,6 +43,6 @@ describe('protocol', function() {
 				kwargs: {},
 				id: "bar"
 			});
-		})
-	})
-})
+		});
+	});
+});

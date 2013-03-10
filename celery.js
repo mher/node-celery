@@ -9,8 +9,7 @@ var uuid = require('node-uuid'),
 var createMessage = require('./protocol').createMessage;
 
 
-debug = process.env['NODE_CELERY_DEBUG'] === '1' ? util.debug : function () {};
-
+debug = process.env.NODE_CELERY_DEBUG === '1' ? util.debug : function() {};
 
 function Configuration(options) {
 	var self = this;
@@ -43,7 +42,7 @@ function Client(conf) {
 	self.backend_connected = false;
 
 	self.broker = amqp.createConnection({
-		url: self.conf.BROKER_URL,
+		url: self.conf.BROKER_URL
 	});
 
 	if (self.conf.backend_type === 'amqp') {
@@ -57,13 +56,13 @@ function Client(conf) {
 			self.backend_connected = true;
 			if (self.broker_connected) {
 				self.ready = true;
-                debug('Emiting connect event');
+				debug('Emiting connect event...');
 				self.emit('connect');
 			}
 		};
 
 		self.backend.on('connect', function() {
-            debug('Backend connected...');
+			debug('Backend connected...');
 			if (purl.auth) {
 				self.backend.auth(purl.auth.split(':')[1], on_ready);
 			} else {
@@ -74,13 +73,12 @@ function Client(conf) {
 		self.backend.on('error', function(err) {
 			self.emit('error', err);
 		});
+	} else {
+		self.backend_connected = true;
 	}
-    else {
-        self.backend_connected = true;
-    }
 
 	self.broker.on('ready', function() {
-        debug('Broker connected...');
+		debug('Broker connected...');
 		self.broker_connected = true;
 		if (self.backend_connected) {
 			self.ready = true;
@@ -111,13 +109,13 @@ Client.prototype.end = function() {
 };
 
 Client.prototype.call = function(name, args, kwargs, options, callback) {
-    var task = this.createTask(name),
-        result = task.call(args, kwargs, options);
+	var task = this.createTask(name),
+		result = task.call(args, kwargs, options);
 
-    if (callback) {
-        result.on('ready', callback);
-    }
-    return result;
+	if (callback) {
+		result.on('ready', callback);
+	}
+	return result;
 };
 
 function Task(client, name, options) {
@@ -144,9 +142,9 @@ Task.prototype.call = function(args, kwargs, options, callback) {
 
 	args = args || [];
 	kwargs = kwargs || {};
-    options = options || {};
+	options = options || {};
 
-    assert(self.client.ready);
+	assert(self.client.ready);
 	return self.publish(args, kwargs, options, callback);
 };
 
@@ -159,7 +157,7 @@ function Result(taskid, client) {
 	self.result = null;
 
 	if (self.client.conf.backend_type === 'amqp') {
-        debug('Subscribing to result queue...')
+		debug('Subscribing to result queue...');
 		self.client.backend.queue(
 		self.taskid.replace(/-/g, ''), {
 			"arguments": {
@@ -172,9 +170,9 @@ function Result(taskid, client) {
 			q.subscribe(function(message) {
 				self.result = message;
 				//q.unbind('#');
-                debug('Emiting ready event...');
+				debug('Emiting ready event...');
 				self.emit('ready', message);
-                self.emit(message.status.toLowerCase(), message);
+				self.emit(message.status.toLowerCase(), message);
 			});
 		});
 	}
@@ -184,7 +182,7 @@ util.inherits(Result, events.EventEmitter);
 
 Result.prototype.get = function(callback) {
 	var self = this;
-	if (callback && self.result == null) {
+	if (callback && self.result === null) {
 		self.client.backend.get('celery-task-meta-' + self.taskid, function(err, reply) {
 			self.result = JSON.parse(reply);
 			callback(self.result);

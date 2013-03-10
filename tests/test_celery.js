@@ -3,8 +3,8 @@ var celery = require('../celery'),
 
 var conf = {
 	CELERY_BROKER_URL: 'amqp://',
-	CELERY_RESULT_BACKEND: 'amqp',
-}
+	CELERY_RESULT_BACKEND: 'amqp'
+};
 
 describe('celery functional tests', function() {
 	describe('initialization', function() {
@@ -15,7 +15,7 @@ describe('celery functional tests', function() {
 				});
 
 			client1.on('connect', function() {
-				client1.end()
+				client1.end();
 			});
 
 			client1.on('error', function(exception) {
@@ -39,7 +39,7 @@ describe('celery functional tests', function() {
 				assert.ok(false);
 			});
 		});
-	})
+	});
 
 	describe('basic task calls', function() {
 		it('should call a task without error', function(done) {
@@ -58,7 +58,7 @@ describe('celery functional tests', function() {
 				done();
 			});
 		});
-	})
+	});
 
 	describe('result handling with amqp backend', function() {
 		it('should return a task result', function(done) {
@@ -78,7 +78,7 @@ describe('celery functional tests', function() {
 				done();
 			});
 		});
-	})
+	});
 
 	describe('result handling with redis backend', function() {
 		it('should return a task result', function(done) {
@@ -100,7 +100,7 @@ describe('celery functional tests', function() {
 				done();
 			});
 		});
-	})
+	});
 
 	describe('eta', function() {
 		it('should call a task with a delay', function(done) {
@@ -125,7 +125,7 @@ describe('celery functional tests', function() {
 				done();
 			});
 		});
-	})
+	});
 
 	describe('expires', function() {
 		it('should call a task which expires', function(done) {
@@ -149,6 +149,5 @@ describe('celery functional tests', function() {
 				done();
 			});
 		});
-	})
-
-})
+	});
+});
