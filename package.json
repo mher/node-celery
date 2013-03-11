@@ -6,6 +6,7 @@
 	"dependencies": {
 		"amqp": "*",
 		"node-uuid": "*",
+		"redis": "*"
 	},
 	"repository": {
 		"type": "git",
