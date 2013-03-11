@@ -1,13 +1,12 @@
-var uuid = require('node-uuid'),
-	url = require('url'),
+var url = require('url'),
 	util = require('util'),
 	amqp = require('amqp'),
 	redis = require('redis'),
 	assert = require('assert'),
-	events = require('events');
+	events = require('events')
+	uuid = require('node-uuid');
 
-var createMessage = require('./protocol')
-	.createMessage;
+var createMessage = require('./protocol').createMessage;
 
 
 debug = process.env.NODE_CELERY_DEBUG === '1' ? util.debug : function() {};
@@ -50,7 +49,7 @@ function Client(conf, callback) {
 	self.broker = amqp.createConnection({
 		url: self.conf.BROKER_URL
 	}, {
-		defaultExchangeName: self.conf.DEFAULT_EXCHANGE,
+		defaultExchangeName: self.conf.DEFAULT_EXCHANGE
 	}, callback);
 
 	if (self.conf.backend_type === 'amqp') {

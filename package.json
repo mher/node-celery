@@ -1,5 +1,5 @@
 {
-	"name": "celery",
+	"name": "node-celery",
 	"version": "0.1.0",
 	"description": "Celery client for Node",
 	"author": "Mher Movsisyan <mher.movsisyan@gmail.com>",
@@ -14,5 +14,6 @@
 	"devDependencies": {
 		"mocha": "*"
 	},
-	"engine": "node >= 0.8.2"
+	"engine": "node >= 0.8.2",
+	"main": "celery.js"
 }

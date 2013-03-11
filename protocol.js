@@ -1,6 +1,7 @@
 var uuid = require('node-uuid');
 
-var fields = ['task', 'id', 'args', 'kwargs', 'retires', 'eta', 'expires', 'taskset', 'chord', 'utc', 'callbacks', 'errbacks', 'timeouts'];
+var fields = ['task', 'id', 'args', 'kwargs', 'retires', 'eta', 'expires',
+              'taskset', 'chord', 'utc', 'callbacks', 'errbacks', 'timeouts'];
 
 
 function formatDate(date) {
