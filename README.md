@@ -1,10 +1,10 @@
 # Celery client for Node.js
 
-node-celery is a Celery client for Node. If you are new to Celery check out http://www.celeryproject.org/
+node-celery is a Celery client for Node. If you are new to Celery check out http://celeryproject.org/
 
 ## Usage
 
-Simple example, included as examples/hello-world.js:
+Simple example, included as [examples/hello-world.js](https://github.com/mher/node-celery/blob/master/examples/hello-world.js):
 
 ```javascript
 var celery = require('node-celery'),
@@ -99,10 +99,12 @@ client.on('connect', function() {
 	});
 });
 ```
+
 ### Routing
 
 The simplest way to route tasks to different queues is using CELERY_ROUTES configuration option:
 
+```javascript
 var celery = require('node-celery'),
 	client = celery.createClient({
 		CELERY_BROKER_URL: 'amqp://guest:guest@localhost:5672//',
@@ -128,3 +130,4 @@ client.on('connect', function() {
 		item: 1345
 	}); // sends a task to the default queue
 });
+```
