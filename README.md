@@ -1,6 +1,8 @@
 # Celery client for Node.js
 
-node-celery is a Celery client for Node. If you are new to Celery check out http://celeryproject.org/
+Celery is an asynchronous task queue/job queue based on distributed
+message passing. node-celery allows to queue tasks from Node.js.
+If you are new to Celery check out http://celeryproject.org/
 
 ## Usage
 
