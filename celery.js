@@ -123,10 +123,10 @@ Client.prototype.call = function(name /*[args], [kwargs], [options], [callback]*
 		} else if (Object.prototype.toString.call(arguments[i]) === '[object Array]') {
 			args = arguments[i];
 		} else if (typeof arguments[i] === 'object') {
-			if (kwargs) {
-				options = arguments[i];
-			} else {
+			if (options) {
 				kwargs = arguments[i];
+			} else {
+				options = arguments[i];
 			}
 		}
 	}
