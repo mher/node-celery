@@ -8,7 +8,7 @@ client.on('error', function(err) {
 });
 
 client.on('connect', function() {
-	client.call('send-email', {
+	client.call('tasks.send_email', {
 		to: 'to@example.com',
 		title: 'sample email'
 	}, {

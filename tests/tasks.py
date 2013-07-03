@@ -1,3 +1,5 @@
+import logging
+
 from celery import Celery
 
 
@@ -34,6 +36,11 @@ def error(msg):
 @celery.task
 def echo(msg):
     return msg
+
+
+@celery.task
+def send_email(to='me@example.com', title='hi'):
+    logging.info("Sending email to '%s' with title '%s'" % (to, title))
 
 
 if __name__ == "__main__":
