@@ -155,7 +155,8 @@ function Task(client, name, options) {
 		self.client.broker.publish(
 		self.options.queue || queue || self.client.conf.DEFAULT_QUEUE,
 		createMessage(self.name, args, kwargs, options, id), {
-			'contentType': 'application/json'
+			'contentType': 'application/json',
+			'contentEncoding': 'utf-8'
 		},
 		callback);
 		return new Result(id, self.client);
