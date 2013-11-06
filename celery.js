@@ -56,8 +56,12 @@ function Client(conf, callback) {
 		self.backend = self.broker;
 		self.backend_connected = true;
 	} else if (self.conf.backend_type === 'redis') {
-		var purl = url.parse(self.conf.RESULT_BACKEND);
+		var purl = url.parse(self.conf.RESULT_BACKEND),
+			database = purl.pathname.slice(1);
 		self.backend = redis.createClient(purl.port, purl.hostname);
+		if (database) {
+			self.backend.select(database);
+		}
 
 		var on_ready = function() {
 			self.backend_connected = true;
