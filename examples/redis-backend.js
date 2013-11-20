@@ -1,7 +1,7 @@
 var celery = require('../celery'),
 	client = celery.createClient({
 		CELERY_BROKER_URL: 'amqp://guest:guest@localhost:5672//',
-		CELERY_RESULT_BACKEND: 'redis://localhost/0'
+		CELERY_RESULT_BACKEND: 'redis://localhost:6379/0'  // <protocol>://<host>:<port>/<database>
 	});
 
 client.on('error', function(err) {
