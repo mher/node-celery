@@ -57,8 +57,12 @@ function Client(conf, callback) {
 		self.backend = self.broker;
 		self.backend_connected = true;
 	} else if (self.conf.backend_type === 'redis') {
-		var purl = url.parse(self.conf.RESULT_BACKEND);
+		var purl = url.parse(self.conf.RESULT_BACKEND),
+			database = purl.pathname.slice(1);
 		self.backend = redis.createClient(purl.port, purl.hostname);
+		if (database) {
+			self.backend.select(database);
+		}
 
 		var on_ready = function() {
 			self.backend_connected = true;
@@ -156,7 +160,8 @@ function Task(client, name, options) {
 		self.client.broker.publish(
 		self.options.queue || queue || self.client.conf.DEFAULT_QUEUE,
 		createMessage(self.name, args, kwargs, options, id), {
-			'contentType': 'application/json'
+			'contentType': 'application/json',
+			'contentEncoding': 'utf-8'
 		},
 		callback);
 		return new Result(id, self.client);

@@ -133,3 +133,7 @@ client.on('connect', function() {
 	}); // sends a task to the default queue
 });
 ```
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/mher/node-celery/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+

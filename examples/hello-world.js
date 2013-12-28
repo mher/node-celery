@@ -12,5 +12,6 @@ client.on('connect', function() {
 	client.call('tasks.echo', ['Hello World!'], function(result) {
 		console.log(result);
 		client.end();
+                client.broker.destroy();
 	});
 });
