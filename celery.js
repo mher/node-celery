@@ -194,7 +194,7 @@ function Result(taskid, client) {
 			"arguments": {
 				'x-expires': self.client.conf.TASK_RESULT_EXPIRES
 			},
-		'durable': self.client.conf.TASK_RESULT_DURABLE
+			'durable': self.client.conf.TASK_RESULT_DURABLE
 		},
 
 		function(q) {
