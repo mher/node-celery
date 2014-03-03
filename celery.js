@@ -153,15 +153,21 @@ function Task(client, name, options) {
 	self.options = options || {};
 
 	var route = self.client.conf.ROUTES[name],
-		queue = route && route.queue;
+		route_queue = self.options.queue || (route && route.queue);
 
 	self.publish = function(args, kwargs, options, callback) {
-		var id = uuid.v4();
+		var id = uuid.v4(),
+			queue = options.queue || route_queue || self.client.conf.DEFAULT_QUEUE;
+		if ('queue' in options) {
+			delete options.queue;
+		}
+
 		self.client.broker.publish(
-		self.options.queue || queue || self.client.conf.DEFAULT_QUEUE,
+		queue,
 		createMessage(self.name, args, kwargs, options, id), {
 			'contentType': 'application/json',
-			'contentEncoding': 'utf-8'
+			'contentEncoding': 'utf-8',
+			'deliveryMode': 1
 		},
 		callback);
 		return new Result(id, self.client);
