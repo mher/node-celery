@@ -166,7 +166,8 @@ function Task(client, name, options) {
 		queue,
 		createMessage(self.name, args, kwargs, options, id), {
 			'contentType': 'application/json',
-			'contentEncoding': 'utf-8'
+			'contentEncoding': 'utf-8',
+			'deliveryMode': 1
 		},
 		callback);
 		return new Result(id, self.client);
