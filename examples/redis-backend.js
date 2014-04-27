@@ -10,9 +10,12 @@ client.on('error', function(err) {
 
 client.on('connect', function() {
     var result = client.call('tasks.add', [1, 2]);
-    setTimout(function() {
+    setTimeout(function() {
         result.get(function(data) {
             console.log(data); // data will be null if the task is not finished
+
+            client.end();
+            client.broker.destroy();
         });
     }, 2000);
 });
