@@ -196,23 +196,23 @@ function Result(taskid, client) {
     if (self.client.conf.backend_type === 'amqp') {
         debug('Subscribing to result queue...');
         self.client.backend.queue(
-        self.taskid.replace(/-/g, ''), {
-            "arguments": {
-                'x-expires': self.client.conf.TASK_RESULT_EXPIRES
+            self.taskid.replace(/-/g, ''), {
+                "arguments": {
+                    'x-expires': self.client.conf.TASK_RESULT_EXPIRES
+                },
+                'durable': self.client.conf.TASK_RESULT_DURABLE
             },
-            'durable': self.client.conf.TASK_RESULT_DURABLE
-        },
 
-        function(q) {
-            q.bind(self.client.conf.RESULT_EXCHANGE, '#');
-            q.subscribe(function(message) {
-                self.result = message;
-                //q.unbind('#');
-                debug('Emiting ready event...');
-                self.emit('ready', message);
-                self.emit(message.status.toLowerCase(), message);
+            function (q) {
+                q.bind(self.client.conf.RESULT_EXCHANGE, '#');
+                q.subscribe(function (message) {
+                    self.result = message;
+                    //q.unbind('#');
+                    debug('Emiting ready event...');
+                    self.emit('ready', message);
+                    self.emit(message.status.toLowerCase(), message);
+                });
             });
-        });
     }
 }
 
