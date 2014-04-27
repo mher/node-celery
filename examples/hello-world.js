@@ -1,7 +1,8 @@
+// NOTE: This example works only with AMQP result backend
 var celery = require('../celery'),
     client = celery.createClient({
         CELERY_BROKER_URL: 'amqp://guest:guest@localhost:5672//',
-        CELERY_RESULT_BACKEND: 'redis://localhost/0'
+        CELERY_RESULT_BACKEND: 'amqp'
     });
 
 client.on('error', function(err) {
