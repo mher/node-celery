@@ -49,7 +49,8 @@ function Client(conf) {
 
     debug('Connecting to broker...');
     self.broker = amqp.createConnection({
-        url: self.conf.BROKER_URL
+        url: self.conf.BROKER_URL,
+        heartbeat: 580
     }, {
         defaultExchangeName: self.conf.DEFAULT_EXCHANGE
     });
