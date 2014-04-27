@@ -66,23 +66,19 @@ function Client(conf) {
             self.backend.select(database);
         }
 
-        var on_ready = function() {
+        if (purl.auth) {
+            debug('Authenticating backend...');
+            self.backend.auth(purl.auth.split(':')[1]);
+            debug('Backend authenticated...');
+        }
+
+        self.backend.on('connect', function() {
+            debug('Backend connected...');
             self.backend_connected = true;
             if (self.broker_connected) {
                 self.ready = true;
                 debug('Emiting connect event...');
                 self.emit('connect');
-            }
-        };
-
-        self.backend.on('connect', function() {
-            debug('Backend connected...');
-            if (purl.auth) {
-                debug('Authenticating backend...');
-                self.backend.auth(purl.auth.split(':')[1], on_ready);
-                debug('Backend authenticated...');
-            } else {
-                on_ready();
             }
         });
 
@@ -210,6 +206,7 @@ function Result(taskid, client) {
                     //q.unbind('#');
                     debug('Emiting ready event...');
                     self.emit('ready', message);
+                    debug('Emiting task status event...');
                     self.emit(message.status.toLowerCase(), message);
                 });
             });
