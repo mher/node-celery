@@ -224,6 +224,9 @@ Result.prototype.get = function(callback) {
             callback(self.result);
         });
     } else {
+        if (callback) {
+            callback(self.result);
+        }
         return self.result;
     }
 };
