@@ -38,7 +38,7 @@ function Configuration(options) {
     }
 }
 
-function Client(conf, callback) {
+function Client(conf) {
     var self = this;
 
     self.conf = new Configuration(conf);
@@ -47,11 +47,12 @@ function Client(conf, callback) {
     self.broker_connected = false;
     self.backend_connected = false;
 
+    debug('Connecting to broker...');
     self.broker = amqp.createConnection({
         url: self.conf.BROKER_URL
     }, {
         defaultExchangeName: self.conf.DEFAULT_EXCHANGE
-    }, callback);
+    });
 
     if (self.conf.backend_type === 'amqp') {
         self.backend = self.broker;
@@ -59,6 +60,7 @@ function Client(conf, callback) {
     } else if (self.conf.backend_type === 'redis') {
         var purl = url.parse(self.conf.RESULT_BACKEND),
             database = purl.pathname.slice(1);
+        debug('Connecting to backend...');
         self.backend = redis.createClient(purl.port, purl.hostname);
         if (database) {
             self.backend.select(database);
@@ -76,7 +78,9 @@ function Client(conf, callback) {
         self.backend.on('connect', function() {
             debug('Backend connected...');
             if (purl.auth) {
+                debug('Authenticating backend...');
                 self.backend.auth(purl.auth.split(':')[1], on_ready);
+                debug('Backend authenticated...');
             } else {
                 on_ready();
             }
@@ -94,6 +98,7 @@ function Client(conf, callback) {
         self.broker_connected = true;
         if (self.backend_connected) {
             self.ready = true;
+            debug('Emiting connect event...');
             self.emit('connect');
         }
     });
@@ -140,6 +145,7 @@ Client.prototype.call = function(name /*[args], [kwargs], [options], [callback]*
         result = task.call(args, kwargs, options);
 
     if (callback) {
+        debug('Subscribing to result...');
         result.on('ready', callback);
     }
     return result;
@@ -155,15 +161,15 @@ function Task(client, name, options) {
     var route = self.client.conf.ROUTES[name],
         queue = route && route.queue;
 
-    self.publish = function(args, kwargs, options, callback) {
+    self.publish = function (args, kwargs, options, callback) {
         var id = uuid.v4();
         self.client.broker.publish(
-        self.options.queue || queue || self.client.conf.DEFAULT_QUEUE,
-        createMessage(self.name, args, kwargs, options, id), {
-            'contentType': 'application/json',
-            'contentEncoding': 'utf-8'
-        },
-        callback);
+            self.options.queue || queue || self.client.conf.DEFAULT_QUEUE,
+            createMessage(self.name, args, kwargs, options, id), {
+                'contentType': 'application/json',
+                'contentEncoding': 'utf-8'
+            },
+            callback);
         return new Result(id, self.client);
     };
 }
