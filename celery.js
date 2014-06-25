@@ -159,7 +159,8 @@ function Task(client, name, options) {
         queue = route && route.queue;
 
     self.publish = function (args, kwargs, options, callback) {
-        var id = uuid.v4();
+        var id = options.id || uuid.v4();
+        
         self.client.broker.publish(
             self.options.queue || queue || self.client.conf.DEFAULT_QUEUE,
             createMessage(self.name, args, kwargs, options, id), {
