@@ -15,11 +15,11 @@ client.on('error', function(err) {
 });
 
 client.on('connect', function() {
-    send_mail.call({
+    send_mail.call([], {
         to: 'to@example.com',
         title: 'hi'
     }); // sends a task to the mail queue
-    calculate_rating.call({
+    calculate_rating.call([], {
         item: 1345
     }); // sends a task to the default queue
 });
