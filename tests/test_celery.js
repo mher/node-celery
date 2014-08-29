@@ -5,6 +5,9 @@ var conf = {
     CELERY_BROKER_URL: 'amqp://',
     CELERY_RESULT_BACKEND: 'amqp'
 };
+var conf_redis = {
+    CELERY_BROKER_URL: 'redis://'
+};
 
 describe('celery functional tests', function() {
     describe('initialization', function() {
@@ -44,6 +47,23 @@ describe('celery functional tests', function() {
     describe('basic task calls', function() {
         it('should call a task without error', function(done) {
             var client = celery.createClient(conf),
+                add = client.createTask('tasks.add');
+
+            client.on('connect', function() {
+                add.call([1, 2]);
+
+                setTimeout(function() {
+                    client.end();
+                }, 100);
+            });
+
+            client.once('end', function() {
+                done();
+            });
+        });
+
+        it('should call a task without error', function(done) {
+            var client = celery.createClient(conf_redis),
                 add = client.createTask('tasks.add');
 
             client.on('connect', function() {

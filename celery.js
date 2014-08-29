@@ -30,6 +30,9 @@ function Configuration(options) {
     self.TASK_RESULT_DURABLE = self.TASK_RESULT_DURABLE || true; // Set Durable true by default (Celery 3.1.7)
     self.ROUTES = self.ROUTES || {};
 
+    self.broker_type = url.parse(self.BROKER_URL).protocol.slice(0, -1);
+    debug('Broker type: ' + self.broker_type);
+
     if (self.RESULT_BACKEND && self.RESULT_BACKEND.toLowerCase() === 'amqp') {
         self.backend_type = 'amqp';
     } else if (self.RESULT_BACKEND && url.parse(self.RESULT_BACKEND)
@@ -37,6 +40,69 @@ function Configuration(options) {
         self.backend_type = 'redis';
     }
 }
+
+function RedisBroker(broker_url) {
+    var self = this;
+    var purl = url.parse(broker_url);
+    var database;
+    if (purl.pathname) {
+      database = purl.pathname.slice(1);
+    }
+
+    self.redis = redis.createClient(purl.port || 6379,
+                                    purl.hostname || 'localhost');
+    if (database) {
+        self.redis.select(database);
+    }
+
+    if (purl.auth) {
+        debug('Authenticating broker...');
+        self.redis.auth(purl.auth.split(':')[1]);
+        debug('Broker authenticated...');
+    }
+
+    self.end = function() {
+      self.redis.end();
+    };
+
+    self.redis.on('connect', function() {
+        self.emit('ready');
+    });
+
+    self.redis.on('error', function(err) {
+        self.emit('error', err);
+    });
+
+    self.redis.on('end', function() {
+        self.emit('end');
+    });
+
+    self.publish = function(queue, message, options, callback, id) {
+        var payload = {
+            body: new Buffer(message).toString('base64'),
+            headers: {},
+            'content-type': options.contentType,
+            'content-encoding': options.contentEncoding,
+            properties: {
+                body_encoding: 'base64',
+                correlation_id: id,
+                delivery_info: {
+                    exchange: queue,
+                    priority: 0,
+                    routing_key: queue
+                },
+                delivery_mode: 2, // No idea what this means
+                delivery_tag: uuid.v4(),
+                reply_to: uuid.v4()
+            }
+        }
+        self.redis.lpush(queue, JSON.stringify(payload));
+    };
+
+    return self;
+}
+util.inherits(RedisBroker, events.EventEmitter);
+
 
 function Client(conf) {
     var self = this;
@@ -48,16 +114,28 @@ function Client(conf) {
     self.backend_connected = false;
 
     debug('Connecting to broker...');
-    self.broker = amqp.createConnection({
-        url: self.conf.BROKER_URL,
-        heartbeat: 580
-    }, {
-        defaultExchangeName: self.conf.DEFAULT_EXCHANGE
-    });
+    debugger;
+    if (self.conf.broker_type === 'amqp') {
+        self.broker = amqp.createConnection({
+            url: self.conf.BROKER_URL,
+            heartbeat: 580
+        }, {
+            defaultExchangeName: self.conf.DEFAULT_EXCHANGE
+        });
+    } else if (self.conf.broker_type === 'redis') {
+      self.broker = new RedisBroker(self.conf.BROKER_URL);
+    }
 
-    if (self.conf.backend_type === 'amqp') {
+    if (self.conf.backend_type === self.conf.broker_type) {
         self.backend = self.broker;
         self.backend_connected = true;
+    } else if (self.conf.backend_type === 'amqp') {
+        self.backend = amqp.createConnection({
+            url: self.conf.BROKER_URL,
+            heartbeat: 580
+        }, {
+            defaultExchangeName: self.conf.DEFAULT_EXCHANGE
+        });
     } else if (self.conf.backend_type === 'redis') {
         var purl = url.parse(self.conf.RESULT_BACKEND),
             database = purl.pathname.slice(1);
@@ -117,7 +195,7 @@ Client.prototype.createTask = function(name, options) {
 
 Client.prototype.end = function() {
     this.broker.end();
-    if (this.broker !== this.backend) {
+    if (this.backend && this.broker !== this.backend) {
         this.backend.end();
     }
 };
@@ -160,14 +238,14 @@ function Task(client, name, options) {
 
     self.publish = function (args, kwargs, options, callback) {
         var id = options.id || uuid.v4();
-        
+
         self.client.broker.publish(
             self.options.queue || queue || self.client.conf.DEFAULT_QUEUE,
             createMessage(self.name, args, kwargs, options, id), {
                 'contentType': 'application/json',
                 'contentEncoding': 'utf-8'
             },
-            callback);
+            callback, id);
         return new Result(id, self.client);
     };
 }
