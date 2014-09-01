@@ -2,7 +2,6 @@ var url = require('url'),
     util = require('util'),
     amqp = require('amqp'),
     redis = require('redis'),
-    assert = require('assert'),
     events = require('events')
     uuid = require('node-uuid');
 
@@ -141,7 +140,7 @@ Client.prototype.call = function(name /*[args], [kwargs], [options], [callback]*
     var task = this.createTask(name),
         result = task.call(args, kwargs, options);
 
-    if (callback) {
+    if (callback && result) {
         debug('Subscribing to result...');
         result.on('ready', callback);
     }
@@ -179,8 +178,12 @@ Task.prototype.call = function(args, kwargs, options, callback) {
     kwargs = kwargs || {};
     options = options || self.options || {};
 
-    assert(self.client.ready);
-    return self.publish(args, kwargs, options, callback);
+    if (!self.client.ready) {
+        self.client.emit('error', 'Client is not ready');
+    }
+    else {
+        return self.publish(args, kwargs, options, callback);
+    }
 };
 
 function Result(taskid, client) {
