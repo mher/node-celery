@@ -116,9 +116,9 @@ Client.prototype.createTask = function(name, options) {
 };
 
 Client.prototype.end = function() {
-    this.broker.end();
-    if (this.broker !== this.backend) {
-        this.backend.end();
+    this.broker.disconnect();
+    if (this.backend && this.broker !== this.backend) {
+        this.backend.quit();
     }
 };
 
