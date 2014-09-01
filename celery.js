@@ -160,7 +160,7 @@ function Task(client, name, options) {
 
     self.publish = function (args, kwargs, options, callback) {
         var id = options.id || uuid.v4();
-        
+
         self.client.broker.publish(
             self.options.queue || queue || self.client.conf.DEFAULT_QUEUE,
             createMessage(self.name, args, kwargs, options, id), {
@@ -204,6 +204,10 @@ function Result(taskid, client) {
             function (q) {
                 q.bind(self.client.conf.RESULT_EXCHANGE, '#');
                 q.subscribe(function (message) {
+                    if (message.contentType === 'application/x-python-serialize') {
+                        console.error('Celery should be configured with json serializer');
+                        process.exit(1);
+                    }
                     self.result = message;
                     //q.unbind('#');
                     debug('Emiting ready event...');
