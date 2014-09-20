@@ -38,6 +38,30 @@ var celery = require('node-celery'),
 	});
 ```
 
+For RabbitMQ backends, the entire broker options can be passed as an object that is handed off to AMQP.
+This allows you to specify parameters such as SSL keyfiles, vhost, and connection timeout among others.
+
+```javascript
+var celery = require('node-celery'),
+	client = celery.createClient({
+		CELERY_BROKER_OPTIONS: {
+			host: 'localhost',
+			port: '5672',
+			login: 'guest',
+			password: 'guest',
+			authMechanism: 'AMQPLAIN',
+			vhost: '/',
+			ssl: {
+				enabled: true,
+				keyFile: '/path/to/keyFile.pem',
+				certFile: '/path/to/certFile.pem',
+				caFile: '/path/to/caFile.pem'
+			}
+		},
+		CELERY_RESULT_BACKEND: 'amqp'
+	});
+```
+
 ### ETA
 
 The ETA (estimated time of arrival) lets you set a specific date and time that is the earliest time at which your task will be executed:
