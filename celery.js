@@ -110,8 +110,8 @@ function Client(conf) {
 
 util.inherits(Client, events.EventEmitter);
 
-Client.prototype.createTask = function(name, options) {
-    return new Task(this, name, options);
+Client.prototype.createTask = function(name, options, exchange) {
+    return new Task(this, name, options, exchange);
 };
 
 Client.prototype.end = function() {
@@ -147,7 +147,7 @@ Client.prototype.call = function(name /*[args], [kwargs], [options], [callback]*
     return result;
 };
 
-function Task(client, name, options) {
+function Task(client, name, options, exchange) {
     var self = this;
 
     self.client = client;
@@ -160,13 +160,19 @@ function Task(client, name, options) {
     self.publish = function (args, kwargs, options, callback) {
         var id = options.id || uuid.v4();
 
-        self.client.broker.publish(
-            self.options.queue || queue || self.client.conf.DEFAULT_QUEUE,
-            createMessage(self.name, args, kwargs, options, id), {
-                'contentType': 'application/json',
-                'contentEncoding': 'utf-8'
-            },
-            callback);
+        queue = self.options.queue || queue || self.client.conf.DEFAULT_QUEUE;
+        var msg = createMessage(self.name, args, kwargs, options, id);
+        var pubOptions = {
+            'contentType': 'application/json',
+            'contentEncoding': 'utf-8'
+        };
+
+        if (exchange) {
+            exchange.publish(queue, msg, pubOptions, callback);
+        } else {
+            self.client.broker.publish(queue, msg, pubOptions, callback);
+        }
+
         return new Result(id, self.client);
     };
 }
