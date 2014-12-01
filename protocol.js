@@ -1,6 +1,6 @@
 var uuid = require('node-uuid');
 
-var fields = ['task', 'id', 'args', 'kwargs', 'retires', 'eta', 'expires', 'queue',
+var fields = ['task', 'id', 'args', 'kwargs', 'retries', 'eta', 'expires', 'queue',
               'taskset', 'chord', 'utc', 'callbacks', 'errbacks', 'timeouts'];
 
 
