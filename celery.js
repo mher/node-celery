@@ -160,7 +160,7 @@ function Task(client, name, options, exchange) {
     self.publish = function (args, kwargs, options, callback) {
         var id = options.id || uuid.v4();
 
-        queue = self.options.queue || queue || self.client.conf.DEFAULT_QUEUE;
+        queue = options.queue || self.options.queue || queue || self.client.conf.DEFAULT_QUEUE;
         var msg = createMessage(self.name, args, kwargs, options, id);
         var pubOptions = {
             'contentType': 'application/json',
