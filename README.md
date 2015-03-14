@@ -30,7 +30,7 @@ client.on('connect', function() {
 });
 ```
 
-**Note:** When using AMQP as resultbackend with celery prior to version
+**Note:** When using AMQP as result backend with celery prior to version
 3.1.7 the result queue needs to be non durable or it will fail with a:
 Queue.declare: (406) PRECONDITION_FAILED.
 
