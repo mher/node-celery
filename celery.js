@@ -2,7 +2,7 @@ var url = require('url'),
     util = require('util'),
     amqp = require('amqp'),
     redis = require('redis'),
-    events = require('events')
+    events = require('events'),
     uuid = require('node-uuid');
 
 var createMessage = require('./protocol').createMessage;
@@ -20,7 +20,7 @@ function Configuration(options) {
     }
 
     self.BROKER_URL = self.BROKER_URL || 'amqp://';
-    self.BROKER_OPTIONS = self.BROKER_OPTIONS || { url: self.BROKER_URL, heartbeat: 580 }
+    self.BROKER_OPTIONS = self.BROKER_OPTIONS || { url: self.BROKER_URL, heartbeat: 580 };
     self.DEFAULT_QUEUE = self.DEFAULT_QUEUE || 'celery';
     self.DEFAULT_EXCHANGE = self.DEFAULT_EXCHANGE || '';
     self.DEFAULT_EXCHANGE_TYPE = self.DEFAULT_EXCHANGE_TYPE || 'direct';
@@ -95,7 +95,7 @@ function RedisBroker(broker_url) {
                 delivery_tag: uuid.v4(),
                 reply_to: uuid.v4()
             }
-        }
+        };
         self.redis.lpush(queue, JSON.stringify(payload));
     };
 
@@ -116,8 +116,7 @@ function Client(conf) {
     debug('Connecting to broker...');
     if (self.conf.broker_type === 'amqp') {
       self.broker = amqp.createConnection(
-        self.conf.BROKER_OPTIONS
-        , {
+        self.conf.BROKER_OPTIONS, {
           defaultExchangeName: self.conf.DEFAULT_EXCHANGE
       });
     } else if (self.conf.broker_type === 'redis') {
