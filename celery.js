@@ -124,7 +124,12 @@ function Client(conf) {
     }
 
     if (self.conf.backend_type === self.conf.broker_type) {
-        self.backend = self.broker;
+
+        if (self.conf.backend_type === 'redis') {
+          self.backend = self.broker.redis;
+        } else {
+          self.backend = self.broker;
+        }
         self.backend_connected = true;
     } else if (self.conf.backend_type === 'amqp') {
         self.backend = amqp.createConnection({
