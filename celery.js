@@ -288,23 +288,25 @@ function Result(taskid, client) {
                 "arguments": {
                     'x-expires': self.client.conf.TASK_RESULT_EXPIRES
                 },
-                'durable': self.client.conf.TASK_RESULT_DURABLE
+                'durable': self.client.conf.TASK_RESULT_DURABLE,
+                'closeChannelOnUnsubscribe': true
             },
 
             function (q) {
                 q.bind(self.client.conf.RESULT_EXCHANGE, '#');
+                var ctag;
                 q.subscribe(function (message) {
                     if (message.contentType === 'application/x-python-serialize') {
                         console.error('Celery should be configured with json serializer');
                         process.exit(1);
                     }
                     self.result = message;
-                    //q.unbind('#');
+                    q.unsubscribe(ctag);
                     debug('Emiting ready event...');
                     self.emit('ready', message);
                     debug('Emiting task status event...');
                     self.emit(message.status.toLowerCase(), message);
-                });
+                }).addCallback(function(ok) { ctag = ok.consumerTag; });
             });
     }
 }
