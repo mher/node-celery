@@ -1,6 +1,6 @@
 {
     "name": "node-celery",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "description": "Celery client for Node",
     "author": "Mher Movsisyan <mher.movsisyan@gmail.com>",
     "dependencies": {
