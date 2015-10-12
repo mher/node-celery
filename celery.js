@@ -207,7 +207,7 @@ Client.prototype.call = function(name /*[args], [kwargs], [options], [callback]*
     for (var i = arguments.length - 1; i > 0; i--) {
         if (typeof arguments[i] === 'function') {
             callback = arguments[i];
-        } else if (Object.prototype.toString.call(arguments[i]) === '[object Array]') {
+        } else if (Array.isArray(arguments[i])) {
             args = arguments[i];
         } else if (typeof arguments[i] === 'object') {
             if (options) {
