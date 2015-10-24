@@ -64,6 +64,10 @@ function RedisBroker(broker_url) {
     self.end = function() {
       self.redis.end();
     };
+    
+    self.disconnect = function() {
+        self.redis.end();
+    };
 
     self.redis.on('connect', function() {
         self.emit('ready');
