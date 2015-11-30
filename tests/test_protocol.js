@@ -44,5 +44,17 @@ describe('protocol', function() {
                 id: "bar"
             });
         });
+
+        it('should send the expiry as UTC', function() {
+            assert.deepEqual(msg("foo", null, null, {
+                expires: Date.parse('Mon Nov 30 2015 10:03:37 GMT+0000 (UTC)')
+            }), {
+                task: "foo",
+                args: [],
+                kwargs: {},
+                expires: "2015-11-30T10:03:37.000Z",
+                id: "id"
+            });
+        });
     });
 });
