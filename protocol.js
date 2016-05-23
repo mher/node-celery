@@ -5,7 +5,7 @@ var fields = ['task', 'id', 'args', 'kwargs', 'retries', 'eta', 'expires', 'queu
 
 
 function formatDate(date) {
-    return new Date(date).toISOString().slice(0, - 1);
+    return new Date(date).toISOString();
 }
 
 function createMessage(task, args, kwargs, options, id) {

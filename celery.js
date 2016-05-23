@@ -27,7 +27,7 @@ function Configuration(options) {
     self.DEFAULT_ROUTING_KEY = self.DEFAULT_ROUTING_KEY || 'celery';
     self.RESULT_EXCHANGE = self.RESULT_EXCHANGE || 'celeryresults';
     self.TASK_RESULT_EXPIRES = self.TASK_RESULT_EXPIRES * 1000 || 86400000; // Default 1 day
-    self.TASK_RESULT_DURABLE = self.TASK_RESULT_DURABLE || true; // Set Durable true by default (Celery 3.1.7)
+    self.TASK_RESULT_DURABLE = undefined !== self.TASK_RESULT_DURABLE ? self.TASK_RESULT_DURABLE : true; // Set Durable true by default (Celery 3.1.7)
     self.ROUTES = self.ROUTES || {};
 
     self.broker_type = url.parse(self.BROKER_URL).protocol.slice(0, -1);
@@ -63,6 +63,10 @@ function RedisBroker(broker_url) {
 
     self.end = function() {
       self.redis.end();
+    };
+    
+    self.disconnect = function() {
+        self.redis.end();
     };
 
     self.redis.on('connect', function() {
@@ -207,7 +211,7 @@ Client.prototype.call = function(name /*[args], [kwargs], [options], [callback]*
     for (var i = arguments.length - 1; i > 0; i--) {
         if (typeof arguments[i] === 'function') {
             callback = arguments[i];
-        } else if (Object.prototype.toString.call(arguments[i]) === '[object Array]') {
+        } else if (Array.isArray(arguments[i])) {
             args = arguments[i];
         } else if (typeof arguments[i] === 'object') {
             if (options) {
