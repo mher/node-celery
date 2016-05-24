@@ -335,3 +335,7 @@ Result.prototype.get = function(callback) {
 exports.createClient = function(config, callback) {
     return new Client(config, callback);
 };
+
+exports.createResult = function(taskId, client) {
+    return new Result(taskId, client);
+};
