@@ -8,7 +8,7 @@ var url = require('url'),
 var createMessage = require('./protocol').createMessage;
 
 
-debug = process.env.NODE_CELERY_DEBUG === '1' ? util.debug : function() {};
+debug = process.env.NODE_CELERY_DEBUG === '1' ? console.info : function() {};
 
 function Configuration(options) {
     var self = this;
