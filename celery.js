@@ -8,7 +8,7 @@ var url = require('url'),
 var createMessage = require('./protocol').createMessage;
 
 
-debug = process.env.NODE_CELERY_DEBUG === '1' ? util.debug : function() {};
+debug = process.env.NODE_CELERY_DEBUG === '1' ? console.info : function() {};
 
 function Configuration(options) {
     var self = this;
@@ -51,14 +51,15 @@ function RedisBroker(broker_url) {
 
     self.redis = redis.createClient(purl.port || 6379,
                                     purl.hostname || 'localhost');
-    if (database) {
-        self.redis.select(database);
-    }
 
     if (purl.auth) {
         debug('Authenticating broker...');
         self.redis.auth(purl.auth.split(':')[1]);
         debug('Broker authenticated...');
+    }
+
+    if (database) {
+        self.redis.select(database);
     }
 
     self.end = function() {
@@ -147,14 +148,15 @@ function Client(conf) {
             database = purl.pathname.slice(1);
         debug('Connecting to backend...');
         self.backend = redis.createClient(purl.port, purl.hostname);
-        if (database) {
-            self.backend.select(database);
-        }
 
         if (purl.auth) {
             debug('Authenticating backend...');
             self.backend.auth(purl.auth.split(':')[1]);
             debug('Backend authenticated...');
+        }
+
+        if (database) {
+            self.backend.select(database);
         }
 
         self.backend.on('connect', function() {
