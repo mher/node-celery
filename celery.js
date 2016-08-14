@@ -31,9 +31,11 @@ function Configuration(options) {
     self.ROUTES = self.ROUTES || {};
 
     self.broker_type = url.parse(self.BROKER_URL).protocol.slice(0, -1);
+    if (self.broker_type === 'amqps')
+        self.broker_type = 'amqp';
     debug('Broker type: ' + self.broker_type);
 
-    if (self.RESULT_BACKEND && self.RESULT_BACKEND.toLowerCase() === 'amqp') {
+    if (self.RESULT_BACKEND && (self.RESULT_BACKEND.toLowerCase() === 'amqp' || self.RESULT_BACKEND.toLowerCase() === 'amqps')) {
         self.backend_type = 'amqp';
     } else if (self.RESULT_BACKEND && url.parse(self.RESULT_BACKEND)
         .protocol === 'redis:') {
