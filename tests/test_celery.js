@@ -82,7 +82,7 @@ describe('celery functional tests', function() {
 
     describe('result handling with amqp backend', function() {
         it('should return a task result', function(done) {
-            if (conf.CELERY_RESULT_BACKEND !== 'amqp') done();
+            if (conf.CELERY_RESULT_BACKEND !== 'amqp') return done();
             var client = celery.createClient(conf),
                 add = client.createTask('tasks.add');
 
@@ -101,8 +101,8 @@ describe('celery functional tests', function() {
     });
 
     describe('result handling with redis backend', function() {
-        it('should return a task result', function(done) {
-            if (conf.CELERY_RESULT_BACKEND === 'amqp') done();
+        it('should return a task result (poll)', function(done) {
+            if (conf.CELERY_RESULT_BACKEND === 'amqp') return done();
             var client = celery.createClient(conf),
                 add = client.createTask('tasks.add');
 
@@ -120,11 +120,29 @@ describe('celery functional tests', function() {
                 done();
             });
         });
+
+        it('should return a task result (push)', function(done) {
+            if (conf.CELERY_RESULT_BACKEND === 'amqp') return done();
+            var client = celery.createClient(conf),
+                add = client.createTask('tasks.add');
+
+            client.on('connect', function() {
+                var result = add.call([1, 2]);
+                result.on('ready', function(message) {
+                    assert.equal(message.result, 3);
+                    client.end();
+                });
+            });
+
+            client.on('end', function() {
+                done();
+            });
+        });
     });
 
     describe('eta', function() {
         it('should call a task with a delay', function(done) {
-            if (conf.CELERY_RESULT_BACKEND !== 'amqp') done();
+            if (conf.CELERY_RESULT_BACKEND !== 'amqp') return done();
             var client = celery.createClient(conf),
                 time = client.createTask('tasks.time');
 
@@ -149,7 +167,7 @@ describe('celery functional tests', function() {
 
     describe('expires', function() {
         it('should call a task which expires', function(done) {
-            if (conf.CELERY_RESULT_BACKEND !== 'amqp') done();
+            if (conf.CELERY_RESULT_BACKEND !== 'amqp') return done();
             var client = celery.createClient(conf),
                 time = client.createTask('tasks.time');
 

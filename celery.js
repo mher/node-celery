@@ -63,11 +63,11 @@ function RedisBroker(broker_url) {
     }
 
     self.end = function() {
-      self.redis.end();
+      self.redis.end(true);
     };
     
     self.disconnect = function() {
-        self.redis.end();
+        self.redis.end(true);
     };
 
     self.redis.on('connect', function() {
@@ -159,6 +159,13 @@ function Client(conf) {
             self.backend.select(database);
         }
 
+        // map to store results to emit event when ready
+        self.redis_results = new Map();
+        // results prefix
+        const redis_key_prefix = 'celery-task-meta-';
+        // needed because we'll use `psubscribe`
+        self.backend_ex = self.backend.duplicate();
+
         self.backend.on('connect', function() {
             debug('Backend connected...');
             self.backend_connected = true;
@@ -167,6 +174,19 @@ function Client(conf) {
                 debug('Emiting connect event...');
                 self.emit('connect');
             }
+            // on redis result..
+            self.backend.on('pmessage', (pattern, channel, message) => {
+                self.backend_ex.expire(channel, self.conf.TASK_RESULT_EXPIRES / 1000);
+                const taskid = channel.slice(redis_key_prefix.length);
+                if (self.redis_results.has(taskid)) {
+                    const result = self.redis_results.get(taskid);
+                    result.result = JSON.parse(message);
+                    result.emit('ready', result.result);
+                    self.redis_results.delete(taskid);
+                }
+            });
+            // subscribe to redis results
+            self.backend.psubscribe(`${redis_key_prefix}*`);
         });
 
         self.backend.on('error', function(err) {
@@ -260,7 +280,13 @@ function Task(client, name, options, exchange) {
             self.client.broker.publish(queue, msg, pubOptions, callback);
         }
 
-        return new Result(id, self.client);
+        const result = new Result(id, self.client);
+
+        if (client.conf.backend_type === 'redis') {
+            client.redis_results.set(result.taskid, result);
+        }
+
+        return result;
     };
 }
 
@@ -322,7 +348,7 @@ util.inherits(Result, events.EventEmitter);
 Result.prototype.get = function(callback) {
     var self = this;
     if (callback && self.result === null) {
-        self.client.backend.get('celery-task-meta-' + self.taskid, function(err, reply) {
+        self.client.backend_ex.get('celery-task-meta-' + self.taskid, function(err, reply) {
             self.result = JSON.parse(reply);
             callback(self.result);
         });
