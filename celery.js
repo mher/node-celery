@@ -33,18 +33,19 @@ function Configuration(options) {
     self.broker_type = url.parse(self.BROKER_URL).protocol.slice(0, -1);
     debug('Broker type: ' + self.broker_type);
 
-    if (self.RESULT_BACKEND && self.RESULT_BACKEND.toLowerCase() === 'amqp') {
-        self.backend_type = 'amqp';
-    } else if (self.RESULT_BACKEND && url.parse(self.RESULT_BACKEND)
-        .protocol === 'redis:') {
+    if (self.RESULT_BACKEND && url.parse(self.RESULT_BACKEND).protocol === 'redis:') {
         self.backend_type = 'redis';
+    } else {
+        self.backend_type = 'amqp';
     }
+    debug('Backend type: ' + self.backend_type);
 }
 
 function RedisBroker(broker_url) {
     var self = this;
     var purl = url.parse(broker_url);
     var database;
+
     if (purl.pathname) {
       database = purl.pathname.slice(1);
     }
@@ -63,11 +64,11 @@ function RedisBroker(broker_url) {
     }
 
     self.end = function() {
-      self.redis.end(true);
+        self.redis.end(true);
     };
     
     self.disconnect = function() {
-        self.redis.end(true);
+        self.redis.quit();
     };
 
     self.redis.on('connect', function() {
@@ -108,34 +109,84 @@ function RedisBroker(broker_url) {
 }
 util.inherits(RedisBroker, events.EventEmitter);
 
+function RedisBackend(conf) {
+    var self = this;
+    var purl = url.parse(conf.RESULT_BACKEND);
+    var database;
+
+    if (purl.pathname) {
+      database = purl.pathname.slice(1);
+    }
+
+    debug('Connecting to backend...');
+    self.redis = redis.createClient(purl.port, purl.hostname);
+    // needed because we'll use `psubscribe`
+    var backend_ex = self.redis.duplicate();
+
+    if (purl.auth) {
+        debug('Authenticating backend...');
+        self.redis.auth(purl.auth.split(':')[1]);
+        debug('Backend authenticated...');
+    }
+
+    if (database) {
+        self.redis.select(database);
+    }
+
+    self.redis.on('error', function(err) {
+        self.emit('error', err);
+    });
+
+    self.redis.on('end', function() {
+        self.emit('end');
+    });
+
+    self.quit = function() {
+        backend_ex.quit();
+        self.redis.quit();
+    };
+
+    // store results to emit event when ready
+    self.results = {};
+    
+    // results prefix
+    var key_prefix = 'celery-task-meta-';
+
+    self.redis.on('connect', function() {
+        debug('Backend connected...');
+        // on redis result..
+        self.redis.on('pmessage', function(pattern, channel, message) {
+            backend_ex.expire(channel, conf.TASK_RESULT_EXPIRES / 1000);
+            var taskid = channel.slice(key_prefix.length);                
+            if (self.results.hasOwnProperty(taskid)) {
+                var res = self.results[taskid];
+                res.result = JSON.parse(message);
+                res.emit('ready', res.result);
+                delete self.results[taskid];
+            }
+        });
+        // subscribe to redis results
+        self.redis.psubscribe(key_prefix + '*');
+        self.emit('ready');
+    });
+
+    self.get = function(taskid, cb) {
+        backend_ex.get(key_prefix + taskid, cb);
+    }
+
+    return self;
+}
+util.inherits(RedisBackend, events.EventEmitter);
 
 function Client(conf) {
     var self = this;
+    self.ready = false;
 
     self.conf = new Configuration(conf);
 
-    self.ready = false;
-    self.broker_connected = false;
-    self.backend_connected = false;
-
-    debug('Connecting to broker...');
-    if (self.conf.broker_type === 'amqp') {
-      self.broker = amqp.createConnection(
-        self.conf.BROKER_OPTIONS, {
-          defaultExchangeName: self.conf.DEFAULT_EXCHANGE
-      });
-    } else if (self.conf.broker_type === 'redis') {
-      self.broker = new RedisBroker(self.conf.BROKER_URL);
-    }
-
-    if (self.conf.backend_type === self.conf.broker_type) {
-
-        if (self.conf.backend_type === 'redis') {
-          self.backend = self.broker.redis;
-        } else {
-          self.backend = self.broker;
-        }
-        self.backend_connected = true;
+    // backend
+    if (self.conf.backend_type === 'redis') {
+        self.backend = new RedisBackend(self.conf);
     } else if (self.conf.backend_type === 'amqp') {
         self.backend = amqp.createConnection({
             url: self.conf.BROKER_URL,
@@ -143,75 +194,38 @@ function Client(conf) {
         }, {
             defaultExchangeName: self.conf.DEFAULT_EXCHANGE
         });
-    } else if (self.conf.backend_type === 'redis') {
-        var purl = url.parse(self.conf.RESULT_BACKEND),
-            database = purl.pathname.slice(1);
-        debug('Connecting to backend...');
-        self.backend = redis.createClient(purl.port, purl.hostname);
-
-        if (purl.auth) {
-            debug('Authenticating backend...');
-            self.backend.auth(purl.auth.split(':')[1]);
-            debug('Backend authenticated...');
+    } else if (self.conf.backend_type === self.conf.broker_type) {
+        if (self.conf.backend_type === 'amqp') {
+          self.backend = self.broker;
         }
-
-        if (database) {
-            self.backend.select(database);
-        }
-
-        // map to store results to emit event when ready
-        self.redis_results = new Map();
-        // results prefix
-        const redis_key_prefix = 'celery-task-meta-';
-        // needed because we'll use `psubscribe`
-        self.backend_ex = self.backend.duplicate();
-
-        self.backend.on('connect', function() {
-            debug('Backend connected...');
-            self.backend_connected = true;
-            if (self.broker_connected) {
-                self.ready = true;
-                debug('Emiting connect event...');
-                self.emit('connect');
-            }
-            // on redis result..
-            self.backend.on('pmessage', (pattern, channel, message) => {
-                self.backend_ex.expire(channel, self.conf.TASK_RESULT_EXPIRES / 1000);
-                const taskid = channel.slice(redis_key_prefix.length);
-                if (self.redis_results.has(taskid)) {
-                    const result = self.redis_results.get(taskid);
-                    result.result = JSON.parse(message);
-                    result.emit('ready', result.result);
-                    self.redis_results.delete(taskid);
-                }
-            });
-            // subscribe to redis results
-            self.backend.psubscribe(`${redis_key_prefix}*`);
-        });
-
-        self.backend.on('error', function(err) {
-            self.emit('error', err);
-        });
-    } else {
-        self.backend_connected = true;
     }
 
-    self.broker.on('ready', function() {
-        debug('Broker connected...');
-        self.broker_connected = true;
-        if (self.backend_connected) {
+    // backend ready...
+    self.backend.on('ready', function() {
+        debug('Connecting to broker...');
+
+        if (self.conf.broker_type === 'redis') {
+            self.broker = new RedisBroker(self.conf.BROKER_URL);
+        } else if (self.conf.broker_type === 'amqp') {
+            self.broker = amqp.createConnection(self.conf.BROKER_OPTIONS, {
+                defaultExchangeName: self.conf.DEFAULT_EXCHANGE
+            });
+        }
+    
+        self.broker.on('ready', function() {
+            debug('Broker connected...');
             self.ready = true;
             debug('Emiting connect event...');
             self.emit('connect');
-        }
-    });
+        });
 
-    self.broker.on('error', function(err) {
-        self.emit('error', err);
-    });
+        self.broker.on('error', function(err) {
+            self.emit('error', err);
+        });
 
-    self.broker.on('end', function() {
-        self.emit('end');
+        self.broker.on('end', function() {
+            self.emit('end');
+        });
     });
 }
 
@@ -223,7 +237,9 @@ Client.prototype.createTask = function(name, options, exchange) {
 
 Client.prototype.end = function() {
     this.broker.disconnect();
-    if (this.backend && this.broker !== this.backend) {
+    if (this.conf.backend_type === 'redis') {
+        this.backend.quit();
+    } else if (this.conf.broker_type !== this.conf.backend_type) {
         this.backend.quit();
     }
 };
@@ -267,6 +283,12 @@ function Task(client, name, options, exchange) {
     self.publish = function (args, kwargs, options, callback) {
         var id = options.id || uuid.v4();
 
+        var result = new Result(id, self.client);
+
+        if (client.conf.backend_type === 'redis') {
+            client.backend.results[result.taskid] = result;
+        }
+
         queue = options.queue || self.options.queue || queue || self.client.conf.DEFAULT_QUEUE;
         var msg = createMessage(self.name, args, kwargs, options, id);
         var pubOptions = {
@@ -278,12 +300,6 @@ function Task(client, name, options, exchange) {
             exchange.publish(queue, msg, pubOptions, callback);
         } else {
             self.client.broker.publish(queue, msg, pubOptions, callback);
-        }
-
-        const result = new Result(id, self.client);
-
-        if (client.conf.backend_type === 'redis') {
-            client.redis_results.set(result.taskid, result);
         }
 
         return result;
@@ -348,7 +364,7 @@ util.inherits(Result, events.EventEmitter);
 Result.prototype.get = function(callback) {
     var self = this;
     if (callback && self.result === null) {
-        self.client.backend_ex.get('celery-task-meta-' + self.taskid, function(err, reply) {
+        self.client.backend.get(self.taskid, function(err, reply) {
             self.result = JSON.parse(reply);
             callback(self.result);
         });
