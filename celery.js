@@ -155,14 +155,18 @@ function RedisBackend(conf) {
     self.redis.on('connect', function() {
         debug('Backend connected...');
         // on redis result..
-        self.redis.on('pmessage', function(pattern, channel, message) {
+        self.redis.on('pmessage', function(pattern, channel, data) {
             backend_ex.expire(channel, conf.TASK_RESULT_EXPIRES / 1000);
+            var message = JSON.parse(data);
             var taskid = channel.slice(key_prefix.length);
             if (self.results.hasOwnProperty(taskid)) {
                 var res = self.results[taskid];
-                res.result = JSON.parse(message);
+                res.result = message;
                 res.emit('ready', res.result);
                 delete self.results[taskid];
+            } else {
+                // in case of incoming messages where we don't have the result object
+                self.emit('message', message);
             }
         });
         // subscribe to redis results
@@ -188,6 +192,9 @@ function Client(conf) {
     // backend
     if (self.conf.backend_type === 'redis') {
         self.backend = new RedisBackend(self.conf);
+        self.backend.on('message', function(msg) {
+            self.emit('message', msg);
+        });
     } else if (self.conf.backend_type === 'amqp') {
         self.backend = amqp.createConnection({
             url: self.conf.BROKER_URL,
@@ -213,19 +220,19 @@ function Client(conf) {
             });
         }
 
-        self.broker.on('ready', function() {
-            debug('Broker connected...');
-            self.ready = true;
-            debug('Emiting connect event...');
-            self.emit('connect');
-        });
-
         self.broker.on('error', function(err) {
             self.emit('error', err);
         });
 
         self.broker.on('end', function() {
             self.emit('end');
+        });
+
+        self.broker.on('ready', function() {
+            debug('Broker connected...');
+            self.ready = true;
+            debug('Emiting connect event...');
+            self.emit('connect');
         });
     });
 }
