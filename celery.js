@@ -66,7 +66,7 @@ function RedisBroker(broker_url) {
     self.end = function() {
         self.redis.end(true);
     };
-    
+
     self.disconnect = function() {
         self.redis.quit();
     };
@@ -148,7 +148,7 @@ function RedisBackend(conf) {
 
     // store results to emit event when ready
     self.results = {};
-    
+
     // results prefix
     var key_prefix = 'celery-task-meta-';
 
@@ -157,7 +157,7 @@ function RedisBackend(conf) {
         // on redis result..
         self.redis.on('pmessage', function(pattern, channel, message) {
             backend_ex.expire(channel, conf.TASK_RESULT_EXPIRES / 1000);
-            var taskid = channel.slice(key_prefix.length);                
+            var taskid = channel.slice(key_prefix.length);
             if (self.results.hasOwnProperty(taskid)) {
                 var res = self.results[taskid];
                 res.result = JSON.parse(message);
@@ -166,8 +166,9 @@ function RedisBackend(conf) {
             }
         });
         // subscribe to redis results
-        self.redis.psubscribe(key_prefix + '*');
-        self.emit('ready');
+        self.redis.psubscribe(key_prefix + '*', () => {
+            self.emit('ready');
+        });
     });
 
     self.get = function(taskid, cb) {
@@ -211,7 +212,7 @@ function Client(conf) {
                 defaultExchangeName: self.conf.DEFAULT_EXCHANGE
             });
         }
-    
+
         self.broker.on('ready', function() {
             debug('Broker connected...');
             self.ready = true;
