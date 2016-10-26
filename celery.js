@@ -26,6 +26,7 @@ function Configuration(options) {
     self.DEFAULT_EXCHANGE_TYPE = self.DEFAULT_EXCHANGE_TYPE || 'direct';
     self.DEFAULT_ROUTING_KEY = self.DEFAULT_ROUTING_KEY || 'celery';
     self.RESULT_EXCHANGE = self.RESULT_EXCHANGE || 'celeryresults';
+    self.IGNORE_RESULT = self.IGNORE_RESULT || false;
     self.TASK_RESULT_EXPIRES = self.TASK_RESULT_EXPIRES * 1000 || 86400000; // Default 1 day
     self.TASK_RESULT_DURABLE = undefined !== self.TASK_RESULT_DURABLE ? self.TASK_RESULT_DURABLE : true; // Set Durable true by default (Celery 3.1.7)
     self.ROUTES = self.ROUTES || {};
@@ -287,7 +288,7 @@ function Result(taskid, client) {
     self.client = client;
     self.result = null;
 
-    if (self.client.conf.backend_type === 'amqp') {
+    if (self.client.conf.backend_type === 'amqp' && !self.client.conf.IGNORE_RESULT) {
         debug('Subscribing to result queue...');
         self.client.backend.queue(
             self.taskid.replace(/-/g, ''), {
