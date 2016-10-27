@@ -8,7 +8,7 @@ var url = require('url'),
 var createMessage = require('./protocol').createMessage;
 
 
-debug = process.env.NODE_CELERY_DEBUG === '1' ? console.info : function() {};
+var debug = process.env.NODE_CELERY_DEBUG === '1' ? console.info : function() {};
 
 function Configuration(options) {
     var self = this;
@@ -65,7 +65,7 @@ function RedisBroker(broker_url) {
     self.end = function() {
       self.redis.end();
     };
-    
+
     self.disconnect = function() {
         self.redis.end();
     };
