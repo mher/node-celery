@@ -6,9 +6,14 @@ var url = require('url'),
     uuid = require('node-uuid');
 
 var createMessage = require('./protocol').createMessage;
-
-
 debug = process.env.NODE_CELERY_DEBUG === '1' ? console.info : function() {};
+
+var supportedProtocols = ['amqp', 'redis'];
+function checkProtocol(kind, protocol) {
+    if (supportedProtocols.indexOf(protocol) === -1) {
+        throw new Error(util.format('Unsupported %s type: %s', kind, protocol));
+    }
+}
 
 function Configuration(options) {
     var self = this;
@@ -19,6 +24,10 @@ function Configuration(options) {
         }
     }
 
+    // common
+    self.TASK_RESULT_EXPIRES = self.TASK_RESULT_EXPIRES * 1000 || 86400000; // Default 1 day
+
+    // broker
     self.BROKER_URL = self.BROKER_URL || 'amqp://';
     self.BROKER_OPTIONS = self.BROKER_OPTIONS || { url: self.BROKER_URL, heartbeat: 580 };
     self.DEFAULT_QUEUE = self.DEFAULT_QUEUE || 'celery';
@@ -26,19 +35,19 @@ function Configuration(options) {
     self.DEFAULT_EXCHANGE_TYPE = self.DEFAULT_EXCHANGE_TYPE || 'direct';
     self.DEFAULT_ROUTING_KEY = self.DEFAULT_ROUTING_KEY || 'celery';
     self.RESULT_EXCHANGE = self.RESULT_EXCHANGE || 'celeryresults';
-    self.TASK_RESULT_EXPIRES = self.TASK_RESULT_EXPIRES * 1000 || 86400000; // Default 1 day
     self.TASK_RESULT_DURABLE = undefined !== self.TASK_RESULT_DURABLE ? self.TASK_RESULT_DURABLE : true; // Set Durable true by default (Celery 3.1.7)
     self.ROUTES = self.ROUTES || {};
 
     self.broker_type = url.parse(self.BROKER_URL).protocol.slice(0, -1);
     debug('Broker type: ' + self.broker_type);
+    checkProtocol('broker', self.broker_type);
 
-    if (self.RESULT_BACKEND && url.parse(self.RESULT_BACKEND).protocol === 'redis:') {
-        self.backend_type = 'redis';
-    } else {
-        self.backend_type = 'amqp';
-    }
+    // backend
+    self.RESULT_BACKEND = self.RESULT_BACKEND || self.BROKER_URL;
+
+    self.backend_type = url.parse(self.RESULT_BACKEND).protocol.slice(0, -1);
     debug('Backend type: ' + self.backend_type);
+    checkProtocol('backend', self.backend_type);
 }
 
 function RedisBroker(broker_url) {

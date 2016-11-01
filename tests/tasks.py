@@ -6,7 +6,8 @@ backend = os.getenv('CELERY_BACKEND_URL', 'amqp')
 celery = Celery('tasks', backend=backend)
 
 celery.conf.update(
-    CELERY_RESULT_SERIALIZER='json'
+    CELERY_RESULT_SERIALIZER='json',
+    CELERY_ENABLE_UTC=True
 )
 
 

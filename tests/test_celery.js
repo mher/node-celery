@@ -3,24 +3,25 @@ var celery = require('../celery'),
 
 // $ docker-compose up -d
 
+var conf_invalid = {
+    CELERY_BROKER_URL: 'amqp://foo'
+}
+
 var conf_amqp = {
-    CELERY_BROKER_URL: 'amqp://',
-    CELERY_RESULT_BACKEND: 'amqp'
+    CELERY_BROKER_URL: 'amqp://'
 };
 
 var conf_redis = {
     CELERY_BROKER_URL: 'redis://',
     CELERY_RESULT_BACKEND: 'redis://',
-    TASK_RESULT_EXPIRES: 5 // seconds
+    TASK_RESULT_EXPIRES: 1 // seconds
 };
 
 describe('celery functional tests', function() {
     describe('initialization', function() {
         it('should create a client without error', function(done) {
             var client1 = celery.createClient(conf_amqp),
-                client2 = celery.createClient({
-                    CELERY_BROKER_URL: 'amqp://foo'
-                });
+                client2 = celery.createClient(conf_invalid);
 
             client1.on('connect', function() {
                 client1.end();
