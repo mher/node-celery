@@ -3,6 +3,9 @@
     "version": "0.2.7",
     "description": "Celery client for Node",
     "author": "Mher Movsisyan <mher.movsisyan@gmail.com>",
+    "scripts": {
+        "test": "mocha tests"
+    },
     "dependencies": {
         "amqp": "*",
         "node-uuid": "*",
