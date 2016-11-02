@@ -9,7 +9,7 @@ var createMessage = require('./protocol').createMessage;
 
 var debug = process.env.NODE_CELERY_DEBUG === '1' ? console.info : function() {};
 
-var supportedProtocols = ['amqp', 'redis'];
+var supportedProtocols = ['amqp', 'amqps', 'redis'];
 function checkProtocol(kind, protocol) {
     if (supportedProtocols.indexOf(protocol) === -1) {
         throw new Error(util.format('Unsupported %s type: %s', kind, protocol));
@@ -40,6 +40,8 @@ function Configuration(options) {
     self.ROUTES = self.ROUTES || {};
 
     self.broker_type = url.parse(self.BROKER_URL).protocol.slice(0, -1);
+    if (self.broker_type === 'amqps')
+        self.broker_type = 'amqp';
     debug('Broker type: ' + self.broker_type);
     checkProtocol('broker', self.broker_type);
 
@@ -47,6 +49,8 @@ function Configuration(options) {
     self.RESULT_BACKEND = self.RESULT_BACKEND || self.BROKER_URL;
 
     self.backend_type = url.parse(self.RESULT_BACKEND).protocol.slice(0, -1);
+    if (self.backend_type === 'amqps')
+        self.backend_type = 'amqp';
     debug('Backend type: ' + self.backend_type);
     checkProtocol('backend', self.backend_type);
 }
