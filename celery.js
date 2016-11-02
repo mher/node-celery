@@ -6,7 +6,8 @@ var url = require('url'),
     uuid = require('node-uuid');
 
 var createMessage = require('./protocol').createMessage;
-debug = process.env.NODE_CELERY_DEBUG === '1' ? console.info : function() {};
+
+var debug = process.env.NODE_CELERY_DEBUG === '1' ? console.info : function() {};
 
 var supportedProtocols = ['amqp', 'redis'];
 function checkProtocol(kind, protocol) {
