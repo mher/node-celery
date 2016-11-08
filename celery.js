@@ -6,9 +6,10 @@ var url = require('url'),
     uuid = require('node-uuid');
 
 var createMessage = require('./protocol').createMessage;
-debug = process.env.NODE_CELERY_DEBUG === '1' ? console.info : function() {};
 
-var supportedProtocols = ['amqp', 'redis'];
+var debug = process.env.NODE_CELERY_DEBUG === '1' ? console.info : function() {};
+
+var supportedProtocols = ['amqp', 'amqps', 'redis'];
 function checkProtocol(kind, protocol) {
     if (supportedProtocols.indexOf(protocol) === -1) {
         throw new Error(util.format('Unsupported %s type: %s', kind, protocol));
@@ -35,10 +36,13 @@ function Configuration(options) {
     self.DEFAULT_EXCHANGE_TYPE = self.DEFAULT_EXCHANGE_TYPE || 'direct';
     self.DEFAULT_ROUTING_KEY = self.DEFAULT_ROUTING_KEY || 'celery';
     self.RESULT_EXCHANGE = self.RESULT_EXCHANGE || 'celeryresults';
+    self.IGNORE_RESULT = self.IGNORE_RESULT || false;
     self.TASK_RESULT_DURABLE = undefined !== self.TASK_RESULT_DURABLE ? self.TASK_RESULT_DURABLE : true; // Set Durable true by default (Celery 3.1.7)
     self.ROUTES = self.ROUTES || {};
 
     self.broker_type = url.parse(self.BROKER_URL).protocol.slice(0, -1);
+    if (self.broker_type === 'amqps')
+        self.broker_type = 'amqp';
     debug('Broker type: ' + self.broker_type);
     checkProtocol('broker', self.broker_type);
 
@@ -48,6 +52,8 @@ function Configuration(options) {
     }
 
     self.backend_type = url.parse(self.RESULT_BACKEND).protocol.slice(0, -1);
+    if (self.backend_type === 'amqps')
+        self.backend_type = 'amqp';
     debug('Backend type: ' + self.backend_type);
     checkProtocol('backend', self.backend_type);
 }
@@ -348,7 +354,7 @@ function Result(taskid, client) {
     self.client = client;
     self.result = null;
 
-    if (self.client.conf.backend_type === 'amqp') {
+    if (self.client.conf.backend_type === 'amqp' && !self.client.conf.IGNORE_RESULT) {
         debug('Subscribing to result queue...');
         self.client.backend.queue(
             self.taskid.replace(/-/g, ''), {
