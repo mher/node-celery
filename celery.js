@@ -43,7 +43,9 @@ function Configuration(options) {
     checkProtocol('broker', self.broker_type);
 
     // backend
-    self.RESULT_BACKEND = self.RESULT_BACKEND || self.BROKER_URL;
+    if (!self.RESULT_BACKEND || (self.RESULT_BACKEND === self.broker_type)) {
+        self.RESULT_BACKEND = self.BROKER_URL;
+    }
 
     self.backend_type = url.parse(self.RESULT_BACKEND).protocol.slice(0, -1);
     debug('Backend type: ' + self.backend_type);
