@@ -3,7 +3,7 @@ var url = require('url'),
     amqp = require('amqp'),
     redis = require('redis'),
     events = require('events'),
-    uuid = require('node-uuid');
+    uuid = require('uuid');
 
 var createMessage = require('./protocol').createMessage;
 

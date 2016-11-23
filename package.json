@@ -1,23 +1,23 @@
 {
-    "name": "node-celery",
-    "version": "0.2.8",
-    "description": "Celery client for Node",
-    "author": "Mher Movsisyan <mher.movsisyan@gmail.com>",
-    "scripts": {
-        "test": "mocha tests"
-    },
-    "dependencies": {
-        "amqp": "*",
-        "node-uuid": "*",
-        "redis": "*"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git://github.com/mher/node-celery.git"
-    },
-    "devDependencies": {
-        "mocha": "*"
-    },
-    "engine": "node >= 0.8.2",
-    "main": "celery.js"
+  "name": "node-celery",
+  "version": "0.2.8",
+  "description": "Celery client for Node",
+  "author": "Mher Movsisyan <mher.movsisyan@gmail.com>",
+  "scripts": {
+    "test": "mocha tests"
+  },
+  "dependencies": {
+    "amqp": "*",
+    "redis": "*",
+    "uuid": "^3.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mher/node-celery.git"
+  },
+  "devDependencies": {
+    "mocha": "*"
+  },
+  "engine": "node >= 0.8.2",
+  "main": "celery.js"
 }

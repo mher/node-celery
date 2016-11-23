@@ -1,5 +1,5 @@
 var assert = require('assert'),
-    uuid = require('node-uuid'),
+    uuid = require('uuid'),
     createMessage = require('../protocol')
         .createMessage;
 
