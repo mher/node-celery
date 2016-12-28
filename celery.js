@@ -134,15 +134,13 @@ function RedisBackend(conf) {
     }
 
     debug('Connecting to backend...');
-    self.redis = redis.createClient(purl.port, purl.hostname);
+    if (purl.auth) {
+        self.redis = redis.createClient(purl.port, purl.hostname, {'auth_pass': purl.auth.split(':')[1]});
+    } else {
+        self.redis = redis.createClient(purl.port, purl.hostname);
+    }
     // needed because we'll use `psubscribe`
     var backend_ex = self.redis.duplicate();
-
-    if (purl.auth) {
-        debug('Authenticating backend...');
-        self.redis.auth(purl.auth.split(':')[1]);
-        debug('Backend authenticated...');
-    }
 
     if (database) {
         self.redis.select(database);
