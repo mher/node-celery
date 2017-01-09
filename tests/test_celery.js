@@ -8,7 +8,8 @@ var conf_invalid = {
 }
 
 var conf_amqp = {
-    CELERY_BROKER_URL: 'amqp://'
+    CELERY_BROKER_URL: 'amqp://',
+    CELERY_RESULT_BACKEND: 'amqp'
 };
 
 var conf_redis = {
