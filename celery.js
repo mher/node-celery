@@ -214,10 +214,6 @@ function Client(conf) {
         self.backend = amqp.createConnection(self.conf.BROKER_OPTIONS, {
             defaultExchangeName: self.conf.DEFAULT_EXCHANGE
         });
-    } else if (self.conf.backend_type === self.conf.broker_type) {
-        if (self.conf.backend_type === 'amqp') {
-          self.backend = self.broker;
-        }
     }
 
     // backend ready...
