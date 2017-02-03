@@ -216,6 +216,10 @@ function Client(conf) {
         });
     }
 
+    self.backend.on('error', function(err) {
+        self.emit('error', err);
+    });
+
     // backend ready...
     self.backend.on('ready', function() {
         debug('Connecting to broker...');
