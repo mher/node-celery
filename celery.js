@@ -199,7 +199,7 @@ function RedisBackend(conf) {
             }
         });
         // subscribe to redis results
-        self.redis.psubscribe(key_prefix + '*', () => {
+        self.redis.psubscribe(key_prefix + '[^php_]*', () => {
             self.emit('ready');
         });
     });
