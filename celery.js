@@ -211,17 +211,14 @@ function Client(conf) {
             self.emit('message', msg);
         });
     } else if (self.conf.backend_type === 'amqp') {
-        self.backend = amqp.createConnection({
-            url: self.conf.BROKER_URL,
-            heartbeat: 580
-        }, {
+        self.backend = amqp.createConnection(self.conf.BROKER_OPTIONS, {
             defaultExchangeName: self.conf.DEFAULT_EXCHANGE
         });
-    } else if (self.conf.backend_type === self.conf.broker_type) {
-        if (self.conf.backend_type === 'amqp') {
-          self.backend = self.broker;
-        }
     }
+
+    self.backend.on('error', function(err) {
+        self.emit('error', err);
+    });
 
     // backend ready...
     self.backend.on('ready', function() {
