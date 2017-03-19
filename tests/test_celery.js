@@ -20,33 +20,62 @@ var conf_redis = {
 
 describe('celery functional tests', function() {
     describe('initialization', function() {
-        it('should create a client without error', function(done) {
-            var client1 = celery.createClient(conf_amqp),
-                client2 = celery.createClient(conf_invalid);
+        it('should create a valid amqp client without error', function(done) {
+            var client = celery.createClient(conf_amqp);
 
-            client1.on('connect', function() {
-                client1.end();
+            assert.equal(client.conf.BROKER_OPTIONS.url, 'amqp://');
+            assert.equal(client.conf.BROKER_OPTIONS.heartbeat, 580);
+            assert.equal(client.conf.broker_type, 'amqp');
+
+            assert.equal(client.conf.RESULT_BACKEND_OPTIONS.url, 'amqp://');
+            assert.equal(client.conf.RESULT_BACKEND_OPTIONS.heartbeat, 580);
+            assert.equal(client.conf.backend_type, 'amqp');
+
+            client.on('connect', function() {
+                client.end();
             });
 
-            client1.on('error', function(exception) {
-                console.log(exception);
+            client.on('error', function(exception) {
                 assert.ok(false);
             });
 
-            client1.once('end', function() {
+            client.once('end', function() {
                 done();
             });
+        });
 
-            client2.on('ready', function() {
+        it('should create a valid redis client without error', function(done) {
+            var client = celery.createClient(conf_redis);
+
+            assert.equal(client.conf.BROKER_OPTIONS.url, 'redis://');
+            assert.equal(client.conf.broker_type, 'redis');
+
+            assert.equal(client.conf.RESULT_BACKEND_OPTIONS.url, 'redis://');
+            assert.equal(client.conf.backend_type, 'redis');
+
+            client.on('connect', function() {
+                client.end();
+            });
+
+            client.on('error', function(exception) {
                 assert.ok(false);
             });
 
-            client2.on('error', function(exception) {
+            client.once('end', function() {
+                done();
+            });
+        });
+
+        it('should throw error on invalid amqp client', function(done) {
+            var client = celery.createClient(conf_invalid);
+
+            client.on('ready', function() {
+                assert.ok(false);
+            });
+
+            client.on('error', function(exception) {
                 assert.ok(exception);
-            });
-
-            client2.once('end', function() {
-                assert.ok(false);
+                done();
             });
         });
     });
