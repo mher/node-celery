@@ -53,6 +53,7 @@ function Configuration(options) {
       self.RESULT_BACKEND = self.BROKER_URL;
     }
     self.RESULT_BACKEND_OPTIONS.url = self.RESULT_BACKEND || self.BROKER_URL;
+    self.RESULT_BACKEND_OPTIONS.createClient = self.RESULT_BACKEND_OPTIONS.createClient || self.BROKER_OPTIONS.createClient;
     self.backend_type = getProtocol('backend', self.RESULT_BACKEND_OPTIONS);
     addProtocolDefaults(self.backend_type, self.RESULT_BACKEND_OPTIONS);
 
@@ -68,7 +69,7 @@ function Configuration(options) {
 
 function RedisBroker(conf) {
     var self = this;
-    self.redis = redis.createClient(conf.BROKER_OPTIONS);
+    self.redis = conf.BROKER_OPTIONS.createClient ? conf.BROKER_OPTIONS.createClient() : redis.createClient(conf.BROKER_OPTIONS);
 
     self.end = function() {
         self.redis.end(true);
@@ -118,7 +119,7 @@ util.inherits(RedisBroker, events.EventEmitter);
 
 function RedisBackend(conf) {
     var self = this;
-    self.redis = redis.createClient(conf.RESULT_BACKEND_OPTIONS);
+    self.redis = conf.RESULT_BACKEND_OPTIONS.createClient ? conf.RESULT_BACKEND_OPTIONS.createClient() : redis.createClient(conf.RESULT_BACKEND_OPTIONS);
 
     var backend_ex = self.redis.duplicate();
 
