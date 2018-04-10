@@ -4,11 +4,12 @@
   "description": "Celery client for Node",
   "author": "Mher Movsisyan <mher.movsisyan@gmail.com>",
   "scripts": {
-    "test": "mocha tests"
+    "test": "mocha tests --exit"
   },
   "dependencies": {
     "amqp": "*",
-    "redis": "*",
+    "ioredis": "^3.2.2",
+    "redis": "^2.8.0",
     "uuid": "^3.0.0"
   },
   "repository": {

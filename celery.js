@@ -1,7 +1,7 @@
 var url = require('url'),
     util = require('util'),
     amqp = require('amqp'),
-    redis = require('redis'),
+    Redis = require('ioredis'),
     events = require('events'),
     uuid = require('uuid');
 
@@ -9,7 +9,7 @@ var createMessage = require('./protocol').createMessage;
 
 var debug = process.env.NODE_CELERY_DEBUG === '1' ? console.info : function() {};
 
-var supportedProtocols = ['amqp', 'amqps', 'redis'];
+var supportedProtocols = ['amqp', 'amqps', 'redis', 'sentinel'];
 function getProtocol(kind, options) {
     const protocol = url.parse(options.url).protocol.slice(0, -1);
     if (protocol === 'amqps') {
@@ -68,7 +68,7 @@ function Configuration(options) {
 
 function RedisBroker(conf) {
     var self = this;
-    self.redis = redis.createClient(conf.BROKER_OPTIONS);
+    self.redis = new Redis(conf.BROKER_OPTIONS);
 
     self.end = function() {
         self.redis.end(true);
@@ -118,8 +118,7 @@ util.inherits(RedisBroker, events.EventEmitter);
 
 function RedisBackend(conf) {
     var self = this;
-    self.redis = redis.createClient(conf.RESULT_BACKEND_OPTIONS);
-
+    self.redis = new Redis(conf.RESULT_BACKEND_OPTIONS);
     var backend_ex = self.redis.duplicate();
 
     self.redis.on('error', function(err) {
@@ -179,7 +178,7 @@ function Client(conf) {
     self.conf = new Configuration(conf);
 
     // backend
-    if (self.conf.backend_type === 'redis') {
+    if (self.conf.backend_type === 'redis' || self.conf.backend_type === 'sentinel') {
         self.backend = new RedisBackend(self.conf);
         self.backend.on('message', function(msg) {
             self.emit('message', msg);
@@ -198,7 +197,7 @@ function Client(conf) {
     self.backend.on('ready', function() {
         debug('Connecting to broker...');
 
-        if (self.conf.broker_type === 'redis') {
+        if (self.conf.broker_type === 'redis' || self.conf.broker_type === 'sentinel') {
             self.broker = new RedisBroker(self.conf);
         } else if (self.conf.broker_type === 'amqp') {
             self.broker = amqp.createConnection(self.conf.BROKER_OPTIONS, {
@@ -252,7 +251,6 @@ Client.prototype.call = function(name /*[args], [kwargs], [options], [callback]*
 
     var task = this.createTask(name),
         result = task.call(args, kwargs, options);
-
     if (callback && result) {
         debug('Subscribing to result...');
         result.on('ready', callback);
@@ -275,7 +273,7 @@ function Task(client, name, options, exchange) {
 
         var result = new Result(id, self.client);
 
-        if (client.conf.backend_type === 'redis') {
+        if (client.conf.backend_type === 'redis' || client.conf.backend_type === 'sentinel') {
             client.backend.results[result.taskid] = result;
         }
 
