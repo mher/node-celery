@@ -1,0 +1,66 @@
+version: "3"
+
+services:
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+
+  rabbit:
+    image: rabbitmq
+    ports:
+      - "5672:5672"
+
+  celery_amqp:
+    image: celery
+    command: celery worker -A tasks --loglevel=INFO
+    volumes:
+      - "./tasks.py:/home/user/tasks.py"
+    depends_on:
+      - rabbit
+
+  celery_redis:
+    image: celery
+    command: celery worker -A tasks --loglevel=INFO
+    volumes:
+      - "./tasks.py:/home/user/tasks.py"
+    environment:
+      - CELERY_BROKER_URL=redis://redis/0
+      - CELERY_BACKEND_URL=redis://redis/0
+    depends_on:
+      - redis
+
+  redis_master:
+    image: 'redis'
+    command: redis-server --port 6380
+    ports:
+      - '6380:6380'
+
+  redis_slave:
+    image: 'redis'
+    command: redis-server --port 6381 --slaveof "${EXTERNAL_HOST}" 6380 --slave-announce-ip "${EXTERNAL_HOST}"
+    ports:
+      - '6381:6381'
+
+  sentinel:
+    build: ./sentinel
+    ports:
+      - '26379:26379'
+    environment:
+      - SENTINEL_NAME=sentinelTest
+      - HOST_IP="${EXTERNAL_HOST}"
+    depends_on:
+      - redis_master
+      - redis_slave
+
+  celery_sentinel:
+    build: ./celery4.2
+    command: celery worker -A tasks --loglevel=INFO
+    volumes:
+      - "./sentinel_tasks.py:/home/user/tasks.py"
+    environment:
+      - BROKER_URL=sentinel://sentinel:26379
+      - MASTER_NAME=sentinelTest
+      - BACKEND_URL=redis://redis_master:6380/0
+    depends_on:
+      - redis

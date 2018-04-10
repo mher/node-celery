@@ -18,6 +18,20 @@ var conf_redis = {
     TASK_RESULT_EXPIRES: 1 // seconds
 };
 
+var conf_sentinel = {
+    CELERY_BROKER_URL: 'sentinel://',
+    CELERY_RESULT_BACKEND: 'sentinel://',
+    TASK_RESULT_EXPIRES: 1, // seconds,
+    CELERY_BROKER_OPTIONS: {
+      sentinels: [{ host: '127.0.0.1', port: 26379 }],
+      name: 'sentinelTest'
+    },
+    RESULT_BACKEND_OPTIONS: {
+      sentinels: [{ host: '127.0.0.1', port: 26379 }],
+      name: 'sentinelTest'
+    }
+};
+
 describe('celery functional tests', function() {
     describe('initialization', function() {
         it('should create a valid amqp client without error', function(done) {
@@ -75,6 +89,10 @@ describe('celery functional tests', function() {
 
             client.on('error', function(exception) {
                 assert.ok(exception);
+                client.emit('end');
+            });
+
+            client.once('end', function() {
                 done();
             });
         });
@@ -157,6 +175,45 @@ describe('celery functional tests', function() {
 
         it('should return a task result (push)', function(done) {
             var client = celery.createClient(conf_redis),
+                add = client.createTask('tasks.add');
+
+            client.on('connect', function() {
+                var result = add.call([1, 2]);
+                result.on('ready', function(message) {
+                    assert.equal(message.result, 3);
+                    client.end();
+                });
+            });
+
+            client.on('end', function() {
+                done();
+            });
+        });
+    });
+
+    describe('result handling with redis sentinel backend', function() {
+        it('should return a task result (poll)', function(done) {
+            var client = celery.createClient(conf_sentinel),
+                add = client.createTask('tasks.add');
+
+            client.on('connect', function() {
+                var result = add.call([1, 2]);
+
+                setTimeout(function() {
+                    result.get(function(message) {
+                        assert.equal(message.result, 3);
+                        client.end();
+                    });
+                }, 500);
+            });
+
+            client.on('end', function() {
+                done();
+            });
+        });
+
+        it('should return a task result (push)', function(done) {
+            var client = celery.createClient(conf_sentinel),
                 add = client.createTask('tasks.add');
 
             client.on('connect', function() {
