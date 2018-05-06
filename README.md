@@ -15,7 +15,7 @@ Simple example, included as [examples/hello-world.js](https://github.com/mher/no
 var celery = require('node-celery'),
 	client = celery.createClient({
 		CELERY_BROKER_URL: 'amqp://guest:guest@localhost:5672//',
-		CELERY_RESULT_BACKEND: 'amqp'
+		CELERY_RESULT_BACKEND: 'amqp://'
 	});
 
 client.on('error', function(err) {
