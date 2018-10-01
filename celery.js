@@ -56,6 +56,8 @@ function Configuration(options) {
     self.backend_type = getProtocol('backend', self.RESULT_BACKEND_OPTIONS);
     addProtocolDefaults(self.backend_type, self.RESULT_BACKEND_OPTIONS);
 
+    self.RESULT_BACKEND_DESERIALIZER = self.RESULT_BACKEND_DESERIALIZER || JSON.parse;
+
     self.DEFAULT_QUEUE = self.DEFAULT_QUEUE || 'celery';
     self.DEFAULT_EXCHANGE = self.DEFAULT_EXCHANGE || '';
     self.DEFAULT_EXCHANGE_TYPE = self.DEFAULT_EXCHANGE_TYPE || 'direct';
@@ -141,12 +143,15 @@ function RedisBackend(conf) {
     // results prefix
     var key_prefix = 'celery-task-meta-';
 
+    // result deserializer
+    var parse = conf.RESULT_BACKEND_DESERIALIZER;
+
     self.redis.on('connect', function() {
         debug('Backend connected...');
         // on redis result..
         self.redis.on('pmessage', function(pattern, channel, data) {
             backend_ex.expire(channel, conf.TASK_RESULT_EXPIRES / 1000);
-            var message = JSON.parse(data);
+            var message = parse(data);
             var taskid = channel.slice(key_prefix.length);
             if (self.results.hasOwnProperty(taskid)) {
                 var res = self.results[taskid];
