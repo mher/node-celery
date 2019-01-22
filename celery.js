@@ -128,10 +128,10 @@ function RedisBackend(conf) {
 
     self.redis.on('end', function() {
         self.emit('end');
+        backend_ex.quit();
     });
 
     self.disconnect = function() {
-        backend_ex.quit();
         self.redis.quit();
     };
 
