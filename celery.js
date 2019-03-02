@@ -53,6 +53,7 @@ function Configuration(options) {
       self.RESULT_BACKEND = self.BROKER_URL;
     }
     self.RESULT_BACKEND_OPTIONS.url = self.RESULT_BACKEND || self.BROKER_URL;
+    self.RESULT_BACKEND_OPTIONS.createClient = self.RESULT_BACKEND_OPTIONS.createClient || self.BROKER_OPTIONS.createClient;
     self.backend_type = getProtocol('backend', self.RESULT_BACKEND_OPTIONS);
     addProtocolDefaults(self.backend_type, self.RESULT_BACKEND_OPTIONS);
 
@@ -68,15 +69,18 @@ function Configuration(options) {
 
 function RedisBroker(conf) {
     var self = this;
-    self.redis = redis.createClient(conf.BROKER_OPTIONS);
 
-    self.end = function() {
-        self.redis.end(true);
-    };
+    if (conf.BROKER_OPTIONS.createClient) {
+        self.redis = conf.BROKER_OPTIONS.createClient('broker');
 
-    self.disconnect = function() {
-        self.redis.quit();
-    };
+        self.disconnect = function () {};
+    } else {
+        self.redis = redis.createClient(conf.BROKER_OPTIONS);
+
+        self.disconnect = function() {
+            self.redis.quit();
+        };
+    }
 
     self.redis.on('connect', function() {
         self.emit('ready');
@@ -118,22 +122,27 @@ util.inherits(RedisBroker, events.EventEmitter);
 
 function RedisBackend(conf) {
     var self = this;
-    self.redis = redis.createClient(conf.RESULT_BACKEND_OPTIONS);
 
-    var backend_ex = self.redis.duplicate();
+    if (conf.RESULT_BACKEND_OPTIONS.createClient) {
+        self.redis = conf.RESULT_BACKEND_OPTIONS.createClient('backend');
+        self.redis_ex = conf.RESULT_BACKEND_OPTIONS.createClient('backend_ex');
 
-    self.redis.on('error', function(err) {
-        self.emit('error', err);
-    });
+        self.disconnect = function () {};
+    } else {
+        self.redis = redis.createClient(conf.RESULT_BACKEND_OPTIONS);
+        self.redis_ex = self.redis.duplicate();
 
-    self.redis.on('end', function() {
-        self.emit('end');
-    });
+        self.disconnect = function() {
+            self.redis_ex.quit();
+            self.redis.quit();
+        };
+    }
 
-    self.disconnect = function() {
-        backend_ex.quit();
-        self.redis.quit();
-    };
+    for (const client of [self.redis, self.redis_ex]) {
+        client.on('error', function(err) {
+            self.emit('error', err);
+        });
+    }
 
     // store results to emit event when ready
     self.results = {};
@@ -145,7 +154,7 @@ function RedisBackend(conf) {
         debug('Backend connected...');
         // on redis result..
         self.redis.on('pmessage', function(pattern, channel, data) {
-            backend_ex.expire(channel, conf.TASK_RESULT_EXPIRES / 1000);
+            self.redis_ex.expire(channel, conf.TASK_RESULT_EXPIRES / 1000);
             var message = JSON.parse(data);
             var taskid = channel.slice(key_prefix.length);
             if (self.results.hasOwnProperty(taskid)) {
@@ -165,7 +174,7 @@ function RedisBackend(conf) {
     });
 
     self.get = function(taskid, cb) {
-        backend_ex.get(key_prefix + taskid, cb);
+        self.redis_ex.get(key_prefix + taskid, cb);
     }
 
     return self;
