@@ -122,6 +122,10 @@ function RedisBackend(conf) {
 
     var backend_ex = self.redis.duplicate();
 
+    backend_ex.on('error', function(err) {
+      self.emit('error', err);
+    });
+
     self.redis.on('error', function(err) {
         self.emit('error', err);
     });
@@ -145,7 +149,12 @@ function RedisBackend(conf) {
         debug('Backend connected...');
         // on redis result..
         self.redis.on('pmessage', function(pattern, channel, data) {
-            backend_ex.expire(channel, conf.TASK_RESULT_EXPIRES / 1000);
+            try {
+              backend_ex.expire(channel, conf.TASK_RESULT_EXPIRES / 1000);
+            } catch(e) {
+              console.log('node_celery backend expire failure', e);
+              self.emit('error', e);
+            }
             var message = JSON.parse(data);
             var taskid = channel.slice(key_prefix.length);
             if (self.results.hasOwnProperty(taskid)) {

@@ -1,0 +1,30 @@
+{
+  "extends": ["react-app", "exaptive"],
+  "rules": {
+    "comma-dangle": [
+      "error",
+      {
+        "arrays": "always-multiline",
+        "objects": "always-multiline",
+        "imports": "always-multiline",
+        "exports": "always-multiline",
+        "functions": "ignore"
+      }
+    ],
+
+    "space-before-function-paren": [
+      "error",
+      {
+        "anonymous": "never",
+        "named": "never",
+        "asyncArrow": "always"
+      }
+    ],
+
+    "class-methods-use-this": 0,
+
+    "indent": 0,
+
+    "no-console": "error"
+  }
+}
