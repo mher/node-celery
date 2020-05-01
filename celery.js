@@ -130,7 +130,7 @@ function RedisBackend(conf) {
         self.disconnect = function () {};
     } else {
         self.redis = redis.createClient(conf.RESULT_BACKEND_OPTIONS);
-        self.redis_ex = self.redis.duplicate();
+        self.redis_ex = redis.createClient(conf.RESULT_BACKEND_OPTIONS);
 
         self.disconnect = function() {
             self.redis_ex.quit();
